@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>rr_common_plugins</name>
-  <version>0.0.0</version>
+  <version>0.0.1</version>
   <description>common plugin for RR robot components</description>
   <maintainer email="azzmosphere@gmail.com">aaron</maintainer>
   <license>MIT</license>
@@ -11,6 +11,8 @@
 
   <depend>pluginlib</depend>
   <depend>rr_common_base</depend>
+  <depend>rclcpp</depend>
+  <depend>rr_interfaces</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

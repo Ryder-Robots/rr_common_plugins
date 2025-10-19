@@ -1,26 +1,31 @@
 <library path="rr_common_plugins">
-    <class type="rrobot::RrSubscriberGpsImpl" base_class_type="rrobot::RrSubscriberGps">
+    <class type="rr_common_plugins::RrSubscriberGpsImpl" base_class_type="rrobot::RrSubscriberGps">
         <name>RrSubscriberGps</name>
         <description>GPS subscriber Implementation</description>
     </class>
-    <class type="rrobot::RrSubscriberJoyImpl" base_class_type="rrobot::RrSubscriberJoy">
+    <class type="rr_common_plugins::RrSubscriberJoyImpl" base_class_type="rrobot::RrSubscriberJoy">
         <name>RrSubscriberJoy</name>
         <description>Joystick subscriber Implementation</description>
     </class>
-    <class type="rrobot::RrSubscriberBattStateImpl" base_class_type="rrobot::RrSubscriberBattState">
+    <class type="rr_common_plugins::RrSubscriberBattStateImpl" base_class_type="rrobot::RrSubscriberBattState">
         <name>RrSubscriberBattState</name>
         <description>Battery state subscriber Implementation</description>
     </class>
-    <class type="rrobot::RrImageSubscriberImpl" base_class_type="rrobot::RrImageSubscriber">
+    <class type="rr_common_plugins::RrImageSubscriberImpl" base_class_type="rrobot::RrImageSubscriber">
         <name>RrImageSubscriber</name>
         <description>Image subscriber Implementation</description>
     </class>
-    <class type="rrobot::RrImuSubscriberImpl" base_class_type="rrobot::RrImuSubscriber">
+    <class type="rr_common_plugins::RrImuSubscriberImpl" base_class_type="rrobot::RrImuSubscriber">
         <name>RrImuSubscriber</name>
         <description>IMU subscriber Implementation</description>
     </class>
-    <class type="rrobot::RrRangesSubscriberImpl" base_class_type="rrobot::RrRangesSubscriber">
+    <class type="rr_common_plugins::RrRangesSubscriberImpl" base_class_type="rrobot::RrRangesSubscriber">
          <name>RrRangesSubscriber</name>
         <description>Ranges subscriber implementation</description>
     </class>
+
+    <class type="rr_common_plugins::RrStateMaintainerImpl" base_class_type="rrobot::RrStateMaintainer">
+         <name>RrStateMaintainer</name>
+        <description>Maintains state within the nodes and provides common state mechanics for other subscribers, actions, and publishers</description>
+    </class>    
 </library>

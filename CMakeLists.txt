@@ -8,17 +8,21 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_ros REQUIRED)
+find_package(rclcpp REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rr_common_base REQUIRED)
+find_package(rr_interfaces REQUIRED)
 
-add_library(rr_common_plugin src/rr_common_plugin.cpp)
-add_library(rr_common_plugins::rr_common_plugin ALIAS rr_common_plugin)
+add_library(rr_common_plugin src/rr_state_maintainer_impl.cpp)
+
 target_compile_features(rr_common_plugin PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 target_include_directories(rr_common_plugin PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 ament_target_dependencies(
   rr_common_plugin
+  rclcpp
+  rr_interfaces
   "pluginlib"
   "rr_common_base"
 )

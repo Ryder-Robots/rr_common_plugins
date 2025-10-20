@@ -15,7 +15,7 @@ find_package(rr_interfaces REQUIRED)
 
 add_library(rr_common_plugin 
   src/rr_state_maintainer_impl.cpp
-  src/rr_subscriber_gps_impl.cpp)
+  src/rr_subscriber_common_impl.cpp)
 
 target_compile_features(rr_common_plugin PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 target_include_directories(rr_common_plugin PUBLIC

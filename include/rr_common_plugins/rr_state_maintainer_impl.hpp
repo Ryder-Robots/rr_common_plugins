@@ -2,6 +2,7 @@
 #define RR_COMMON_PLUGINS__RR_STATE_MAINTAINER_HPP_
 
 #include "pluginlib/class_list_macros.hpp"
+#include "rclcpp/logging.hpp"
 #include "rr_common_base/rr_state_maintainer.hpp"
 #include "rr_common_plugins/visibility_control.h"
 
@@ -50,9 +51,9 @@ namespace rr_common_plugins
         bool has_imu() override;
         const sensor_msgs::msg::Imu get_imu() override;
 
-        void set_ranges(const std::list<sensor_msgs::msg::Range>) override;
+        void set_range(const sensor_msgs::msg::Range::SharedPtr) override;
         bool has_ranges() override;
-        const std::list<sensor_msgs::msg::Range> get_ranges() override;
+        const std::vector<sensor_msgs::msg::Range> get_ranges() override;
 
         const rr_interfaces::msg::FeatureSet get_feature_set() override;
 
@@ -65,7 +66,7 @@ namespace rr_common_plugins
         sensor_msgs::msg::BatteryState batt_state_;  // current battery state
         sensor_msgs::msg::Image img_;                // current image
         sensor_msgs::msg::Imu imu_;                  // IMU
-        std::list<sensor_msgs::msg::Range> ranges_;  // ranges given by ultra-sonic, or other range detecting device
+        std::vector<sensor_msgs::msg::Range> ranges_;  // ranges given by ultra-sonic, or other range detecting device
         rr_interfaces::msg::FeatureSet feature_set_; // indicates that feature is present, or has been present
 
         // shared mutex to allow multiple readers or one writer

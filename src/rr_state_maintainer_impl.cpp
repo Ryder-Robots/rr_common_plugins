@@ -98,11 +98,19 @@ const sensor_msgs::msg::Imu RrStateMaintainerImpl::get_imu()
     return imu_;
 }
 
-void RrStateMaintainerImpl::set_ranges(const std::list<sensor_msgs::msg::Range> ranges)
+void RrStateMaintainerImpl::set_range(const sensor_msgs::msg::Range::SharedPtr range)
 {
     std::unique_lock<std::shared_mutex> lock(mutex_);
     feature_set_.has_ranges = true;
-    ranges_ = ranges;
+    for (size_t i = 0; i < ranges_.size(); ++i) {
+        if (ranges_.at(i).header.frame_id == range->header.frame_id) {
+            ranges_[i] = *range;
+            return;
+        }
+    }
+    
+    ranges_.resize(ranges_.size() + 1);
+    ranges_.push_back(*range);
 }
 
 bool RrStateMaintainerImpl::has_ranges()
@@ -111,7 +119,7 @@ bool RrStateMaintainerImpl::has_ranges()
     return feature_set_.has_ranges;
 }
 
-const std::list<sensor_msgs::msg::Range> RrStateMaintainerImpl::get_ranges()
+const std::vector<sensor_msgs::msg::Range> RrStateMaintainerImpl::get_ranges()
 {
     std::shared_lock<std::shared_mutex> lock(mutex_);
     return ranges_;
@@ -133,6 +141,9 @@ void RrStateMaintainerImpl::init(rclcpp::Logger logger)
     feature_set_.has_imu = false;
     feature_set_.has_joy = false;
     feature_set_.has_ranges = false;
+
+    // set to zero for initilization.
+    ranges_.resize(0);
 }
 
 PLUGINLIB_EXPORT_CLASS(rr_common_plugins::RrStateMaintainerImpl, rrobot::RrStateMaintainer)

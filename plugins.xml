@@ -19,13 +19,24 @@
         <name>RrImuSubscriber</name>
         <description>IMU subscriber Implementation</description>
     </class>
-    <class type="rr_common_plugins::RrRangesSubscriberImpl" base_class_type="rrobot::RrRangesSubscriber">
-         <name>RrRangesSubscriber</name>
+
+    <class type="rr_common_plugins::RrRangesSubscriberLeft" base_class_type="rrobot::RrRangesSubscriber">
+        <name>RrRangesSubscriber</name>
+        <description>Ranges subscriber implementation</description>
+    </class>
+
+    <class type="rr_common_plugins::RrRangesSubscriberCenter" base_class_type="rrobot::RrRangesSubscriber">
+        <name>RrRangesSubscriber</name>
+        <description>Ranges subscriber implementation</description>
+    </class>
+
+    <class type="rr_common_plugins::RrRangesSubscriberRight" base_class_type="rrobot::RrRangesSubscriber">
+        <name>RrRangesSubscriber</name>
         <description>Ranges subscriber implementation</description>
     </class>
 
     <class type="rr_common_plugins::RrStateMaintainerImpl" base_class_type="rrobot::RrStateMaintainer">
-         <name>RrStateMaintainer</name>
+        <name>RrStateMaintainer</name>
         <description>Maintains state within the nodes and provides common state mechanics for other subscribers, actions, and publishers</description>
-    </class>    
+    </class>
 </library>

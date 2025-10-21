@@ -2,7 +2,7 @@
 #define RR_COMMON_PLUGINS__RR_COMMON_SUBSCRIBERS_HPP_
 
 #include "rclcpp/logging.hpp"
-#include "rr_common_base/rr_range_sensor_constants.hpp"
+#include "rr_common_base/rr_constants.hpp"
 #include "rr_common_base/rr_subscriber.hpp"
 #include "rr_common_plugins/visibility_control.h"
 #include <sensor_msgs/image_encodings.hpp>
@@ -89,7 +89,7 @@ namespace rr_common_plugins
       public:
         RrSubscriberGpsImpl()
         {
-            this->initialize("gps-topic", "/fix", "gps_link");
+            this->initialize("gps-topic", rr_constants::TOPIC_GPS_FIXED, rr_constants::LINK_GPS);
         }
 
         ~RrSubscriberGpsImpl() = default;
@@ -113,7 +113,7 @@ namespace rr_common_plugins
       public:
         RrSubscriberJoyImpl()
         {
-            this->initialize("joy-topic", "/joy", "joy-ps4");
+            this->initialize("joy-topic", rr_constants::TOPIC_JOY, rr_constants::LINK_JOY_PS4);
         }
 
         ~RrSubscriberJoyImpl() = default;
@@ -155,7 +155,7 @@ namespace rr_common_plugins
       public:
         RrSubscriberBattStateImpl()
         {
-            this->initialize("batt-topic", "/battery_state", "power_supply");
+            this->initialize("batt-topic", rr_constants::TOPIC_BATT_STATE, rr_constants::LINK_BATT_STATE);
         }
 
         ~RrSubscriberBattStateImpl() = default;
@@ -175,32 +175,10 @@ namespace rr_common_plugins
       public:
         RrImageSubscriberImpl()
         {
-            this->initialize("rr_image_topic", "/camera/image_raw", FRAME_ID_CLINK);
+            this->initialize("rr-image-topic", rr_constants::TOPIC_IMAGE_RAW, rr_constants::LINK_CAM);
         }
 
         ~RrImageSubscriberImpl() = default;
-
-        /**
-         *  Note that frame_ids listed below can be used to check with inbound requests to determine if
-         * they are processed correctly.
-         */
-
-        //  general 3D reference frame of the camera device
-        const std::string FRAME_ID_CLINK = "camera_link";
-
-        // frame with optical-axis alignment (+z points forward into the image plane, +x to the right, +y downward)
-        const std::string FRAME_ID_OPT = "camera_optical_frame";
-
-        // "left_camera_optical_frame" / "right_camera_optical_frame" — for stereo systems
-        const std::string FRAME_ID_LEFT_CAM_OPT = "left_camera_optical_frame";
-        const std::string FRAME_ID_RIGHT_CAM_OPT = "right_camera_optical_frame";
-
-        // "depth_camera_optical_frame" — for depth sensors such as RGB-D cameras
-        const std::string FRAME_ID_DEPTH_OPT = "depth_camera_optical_frame";
-
-        // "ir_camera_optical_frame" — for infrared or time-of-flight modules
-        const std::string FRAME_ID_IR = "ir_camera_optical_frame";
-
         void callback(const sensor_msgs::msg::Image::SharedPtr) override;
     };
 
@@ -209,7 +187,7 @@ namespace rr_common_plugins
       public:
         RrImuSubscriberImpl()
         {
-            this->initialize("rr_imu_topic", "/imu/data", "imu_link");
+            this->initialize("rr-imu-topic", rr_constants::TOPIC_IMU, rr_constants::LINK_IMU);
         }
 
         ~RrImuSubscriberImpl() = default;
@@ -233,12 +211,10 @@ namespace rr_common_plugins
       public:
         RrRangesSubscriberLeft()
         {
-            this->initialize(rrobot::ULTRA_SONIC_LEFT_LINK, rrobot::ULTRA_SONIC_LEFT_TOPIC, "sensor_ultrasonic_left");
+            this->initialize("rr-sonic-left-topic", rr_constants::TOPIC_ULTRA_SONIC_LEFT , rr_constants::LINK_ULTRA_SONIC_LEFT);
         }
 
         ~RrRangesSubscriberLeft() = default;
-
-        void callback(const sensor_msgs::msg::Range::SharedPtr) override;
     };
 
     class RrRangesSubscriberCenter : public RrRangeSubscriberBase
@@ -246,12 +222,10 @@ namespace rr_common_plugins
       public:
         RrRangesSubscriberCenter()
         {
-            this->initialize(rrobot::ULTRA_SONIC_CENTER_LINK, rrobot::ULTRA_SONIC_CENTER_TOPIC, "sensor_ultrasonic_center");
+            this->initialize("rr-sonic-center-topic", rr_constants::TOPIC_ULTRA_SONIC_CENTER, rr_constants::LINK_ULTRA_SONIC_CENTER);
         }
 
         ~RrRangesSubscriberCenter() = default;
-
-        void callback(const sensor_msgs::msg::Range::SharedPtr) override;
     };
 
     class RrRangesSubscriberRight : public RrRangeSubscriberBase
@@ -259,12 +233,10 @@ namespace rr_common_plugins
       public:
         RrRangesSubscriberRight()
         {
-            this->initialize(rrobot::ULTRA_SONIC_RIGHT_LINK, rrobot::ULTRA_SONIC_RIGHT_TOPIC, "sensor_ultrasonic_center");
+            this->initialize("rr-sonic-right-topic", rr_constants::TOPIC_ULTRA_SONIC_RIGHT, rr_constants::LINK_ULTRA_SONIC_RIGHT);
         }
 
         ~RrRangesSubscriberRight() = default;
-
-        void callback(const sensor_msgs::msg::Range::SharedPtr) override;
     };
 
 } // namespace rr_common_plugins

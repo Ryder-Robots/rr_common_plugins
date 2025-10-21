@@ -98,19 +98,24 @@ const sensor_msgs::msg::Imu RrStateMaintainerImpl::get_imu()
     return imu_;
 }
 
-void RrStateMaintainerImpl::set_range(const sensor_msgs::msg::Range::SharedPtr range)
+void RrStateMaintainerImpl::set_range(const sensor_msgs::msg::Range range)
 {
     std::unique_lock<std::shared_mutex> lock(mutex_);
+
+    if (std::find(RANGES_LINKS_.begin(), RANGES_LINKS_.end(), range.header.frame_id) == RANGES_LINKS_.end()) {
+        RCLCPP_ERROR(logger_, "unsupported range sensor, %s not found in supported", range.header.frame_id.c_str());
+    }
+
     feature_set_.has_ranges = true;
     for (size_t i = 0; i < ranges_.size(); ++i) {
-        if (ranges_.at(i).header.frame_id == range->header.frame_id) {
-            ranges_[i] = *range;
+        if (ranges_.at(i).header.frame_id == range.header.frame_id) {
+            ranges_[i] = range;
             return;
         }
     }
     
     ranges_.resize(ranges_.size() + 1);
-    ranges_.push_back(*range);
+    ranges_.push_back(range);
 }
 
 bool RrStateMaintainerImpl::has_ranges()

@@ -88,10 +88,7 @@ TEST_F(TestController, range)
 
     // this value can be calculated as FoV = 2 x arctan(beam radius / distance from sensor), URM09 the beam radius is 60 degrees
     expected1.field_of_view = 2 * atan(2 * (60 / expected1.range));
-
-    RCLCPP_INFO(logger_, "attempting to set range");
     state_maintainer_->set_range(expected1);
-    RCLCPP_INFO(logger_, "range should be set");
 
     EXPECT_TRUE(state_maintainer_->get_feature_set().has_ranges);
     EXPECT_EQ(rr_constants::LINK_ULTRA_SONIC_CENTER, state_maintainer_->get_ranges()[0].header.frame_id);

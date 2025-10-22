@@ -51,13 +51,19 @@ TEST_F(TestCommonSubscriber, gps)
     msg_gps->position_covariance_type = sensor_msgs::msg::NavSatFix::COVARIANCE_TYPE_UNKNOWN;
 
     // initlization of callback.
-    auto gps_callback = std::make_shared<RrSubscriberGpsImpl>();
-    gps_callback->set_state_handler(state_maintainer_);
+    auto gps_callback = std::make_shared<RrSubscriberGpsImpl>(state_maintainer_);
 
     // running the callback
     gps_callback->callback(msg_gps);
 
     EXPECT_TRUE(state_maintainer_->has_gps());
+    EXPECT_EQ(state_maintainer_->get_gps().header.stamp, current_time);
+    EXPECT_EQ(state_maintainer_->get_gps().header.frame_id, rr_constants::LINK_GPS);
+    EXPECT_EQ(state_maintainer_->get_gps().status.status, sensor_msgs::msg::NavSatStatus::STATUS_FIX);
+    EXPECT_EQ(state_maintainer_->get_gps().status.service, sensor_msgs::msg::NavSatStatus::SERVICE_GPS);
+    EXPECT_NEAR(state_maintainer_->get_gps().latitude, -33.8688, 0.000009);
+    EXPECT_NEAR(state_maintainer_->get_gps().longitude,151.2093, 0.000009);
+    EXPECT_NEAR(state_maintainer_->get_gps().altitude, 58, 1);
 }
 
 int main(int argc, char **argv)

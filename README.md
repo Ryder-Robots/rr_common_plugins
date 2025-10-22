@@ -6,3 +6,11 @@ Plugins for that are used as shared code for different nodes.
 
 * Move constants to base class
 * Change range sensor from pointer to native type, they are already stored in shared memory through the state maintainer.
+
+
+## Testing
+
+```bash
+colcon test --ctest tests --packages-select rr_common_plugins
+colcon test-result --all
+```

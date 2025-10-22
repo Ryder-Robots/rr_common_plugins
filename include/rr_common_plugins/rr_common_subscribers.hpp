@@ -84,15 +84,21 @@ namespace rr_common_plugins
      * @class RrSubscriberGps
      * @brief implementation of GPS subscription service.
      */
-    class RrSubscriberGpsImpl : public RrSubscriberBase, rrobot::RrSubscriberGps
+    class RrSubscriberGpsImpl : public rrobot::RrSubscriberGps
     {
       public:
         RrSubscriberGpsImpl()
         {
-            this->initialize("gps-topic", rr_constants::TOPIC_GPS_FIXED, rr_constants::LINK_GPS);
+            // this->initialize("gps-topic", rr_constants::TOPIC_GPS_FIXED, rr_constants::LINK_GPS);
         }
 
         ~RrSubscriberGpsImpl() = default;
+
+        // TEST TEMP
+        std::string get_topic_param() override {return "";}
+        std::string get_topic_default() override {return "";}
+        void set_logger(rclcpp::Logger) override {}
+        void set_state_handler(std::shared_ptr<rrobot::RrStateMaintainer>) override {}
 
         void callback(const sensor_msgs::msg::NavSatFix::SharedPtr) override;
     };

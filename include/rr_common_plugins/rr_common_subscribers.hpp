@@ -59,14 +59,6 @@ namespace rr_common_plugins
             state_ = state;
         }
 
-      protected:
-        rclcpp::Logger logger_ = rclcpp::get_logger("subscriber");
-        std::shared_ptr<rrobot::RrStateMaintainer> state_;
-        std::string topic_param_ = "not_set";
-        std::string topic_ = "not_set";
-        std::string frame_id_ = "not_set";
-
-      protected:
         /**
          * @fn initlize
          * 
@@ -78,6 +70,13 @@ namespace rr_common_plugins
             topic_ = topic;
             frame_id_ = frame_id;
         }
+
+      protected:
+        rclcpp::Logger logger_ = rclcpp::get_logger("subscriber");
+        std::shared_ptr<rrobot::RrStateMaintainer> state_;
+        std::string topic_param_ = "not_set";
+        std::string topic_ = "not_set";
+        std::string frame_id_ = "not_set";
     };
 
     /**
@@ -87,20 +86,46 @@ namespace rr_common_plugins
     class RrSubscriberGpsImpl : public rrobot::RrSubscriberGps
     {
       public:
-        RrSubscriberGpsImpl()
-        {
-            // this->initialize("gps-topic", rr_constants::TOPIC_GPS_FIXED, rr_constants::LINK_GPS);
-        }
+        RrSubscriberGpsImpl() : topic_param_("gps-topic"),
+                                topic_(rr_constants::TOPIC_GPS_FIXED),
+                                frame_id_(rr_constants::LINK_GPS)
+
+        {}
 
         ~RrSubscriberGpsImpl() = default;
 
-        // TEST TEMP
-        std::string get_topic_param() override {return "";}
-        std::string get_topic_default() override {return "";}
-        void set_logger(rclcpp::Logger) override {}
-        void set_state_handler(std::shared_ptr<rrobot::RrStateMaintainer>) override {}
-
+        // std::string get_topic_param() override { return base_.get_topic_param(); }
+        // std::string get_topic_default() override { return base_.get_topic_default(); }
+        // void set_logger(rclcpp::Logger logger) override { base_.set_logger(logger); }
+        // void set_state_handler(std::shared_ptr<rrobot::RrStateMaintainer> state) override { base_.set_state_handler(state); }
         void callback(const sensor_msgs::msg::NavSatFix::SharedPtr) override;
+
+        std::string get_topic_param() override
+        {
+            return topic_param_;
+        }
+
+        std::string get_topic_default() override
+        {
+            return topic_;
+        }
+
+        void set_logger(rclcpp::Logger logger) override
+        {
+            logger_ = logger;
+        }
+
+        void set_state_handler(std::shared_ptr<rrobot::RrStateMaintainer> state) override
+        {
+            state_ = state;
+        }
+
+      protected:
+        rclcpp::Logger logger_ = rclcpp::get_logger("subscriber");
+        std::shared_ptr<rrobot::RrStateMaintainer> state_;
+        std::string topic_param_;
+        std::string topic_;
+        std::string frame_id_;
     };
 
     /**
@@ -217,7 +242,7 @@ namespace rr_common_plugins
       public:
         RrRangesSubscriberLeft()
         {
-            this->initialize("rr-sonic-left-topic", rr_constants::TOPIC_ULTRA_SONIC_LEFT , rr_constants::LINK_ULTRA_SONIC_LEFT);
+            this->initialize("rr-sonic-left-topic", rr_constants::TOPIC_ULTRA_SONIC_LEFT, rr_constants::LINK_ULTRA_SONIC_LEFT);
         }
 
         ~RrRangesSubscriberLeft() = default;

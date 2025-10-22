@@ -8,8 +8,8 @@ using namespace rr_common_plugins;
 //TODO: fix the following
 void RrSubscriberGpsImpl::callback(const sensor_msgs::msg::NavSatFix::SharedPtr msg)
 {
-    // RCLCPP_DEBUG(logger_, "received message GPS msg");
-    // state_->set_gps(*msg);
+    RCLCPP_DEBUG(logger_, "received message GPS msg");
+    state_->set_gps(*msg);
 }
 
 void RrSubscriberJoyImpl::callback(const sensor_msgs::msg::Joy::SharedPtr msg)

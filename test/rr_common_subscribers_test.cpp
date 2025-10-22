@@ -1,7 +1,7 @@
 #include "rclcpp/rclcpp.hpp"
-#include "rr_common_plugins/rr_state_maintainer_impl.hpp"
 #include "rr_common_base/rr_constants.hpp"
 #include "rr_common_plugins/rr_common_subscribers.hpp"
+#include "rr_common_plugins/rr_state_maintainer_impl.hpp"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -38,7 +38,7 @@ TEST_F(TestCommonSubscriber, gps)
 {
     rclcpp::Clock clock;
     auto current_time = clock.now();
-    sensor_msgs::msg::NavSatFix::SharedPtr msg_gps;
+    auto msg_gps = std::make_shared<sensor_msgs::msg::NavSatFix>();
 
     msg_gps->header.stamp = current_time;
     msg_gps->header.frame_id = rr_constants::LINK_GPS;
@@ -48,11 +48,16 @@ TEST_F(TestCommonSubscriber, gps)
     msg_gps->longitude = 151.2093; // Degrees, e.g., Sydney
     msg_gps->altitude = 58.0;      // In meters above WGS84 ellipsoid
     std::fill(std::begin(msg_gps->position_covariance), std::end(msg_gps->position_covariance), 0.0);
+    msg_gps->position_covariance_type = sensor_msgs::msg::NavSatFix::COVARIANCE_TYPE_UNKNOWN;
 
-    RrSubscriberGpsImpl gps;
+    // initlization of callback.
+    auto gps_callback = std::make_shared<RrSubscriberGpsImpl>();
+    gps_callback->set_state_handler(state_maintainer_);
 
-    // msg_gps->std::shared_ptr<RrSubscriberGpsImpl>> gps_callback = std::make_shared<RrSubscriberGpsImpl>();
-    // gps_callback.callback();
+    // running the callback
+    gps_callback->callback(msg_gps);
+
+    EXPECT_TRUE(state_maintainer_->has_gps());
 }
 
 int main(int argc, char **argv)

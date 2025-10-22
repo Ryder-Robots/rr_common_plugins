@@ -64,6 +64,8 @@ TEST_F(TestCommonSubscriber, gps)
     EXPECT_NEAR(state_maintainer_->get_gps().latitude, -33.8688, 0.000009);
     EXPECT_NEAR(state_maintainer_->get_gps().longitude,151.2093, 0.000009);
     EXPECT_NEAR(state_maintainer_->get_gps().altitude, 58, 1);
+
+    EXPECT_EQ(gps_callback->get_topic_default(), rr_constants::TOPIC_GPS_FIXED);
 }
 
 int main(int argc, char **argv)

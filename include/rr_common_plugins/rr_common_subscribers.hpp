@@ -62,23 +62,31 @@ namespace rr_common_plugins
         std::string frame_id_ = "not_set";
     };
 
+
+
     /**
-     * @class RrSubscriberGps
-     * @brief implementation of GPS subscription service.
+     * @class RrSubscriberJoyImpl
+     * 
+     * The following constants are true for PS4 joysticks not sure if it is true about all controllers.
+     * 
+     * Note lists for games controllers are split into two parts, sticks which are an anolog component which 
+     * gives a value between -1 to 1,  where 0 is centered. 
+     * 
+     * Buttons which are the various button values on the game controller, these are generally boolean values
+     * that can be represented as 1 or 0. Not all buttons are mapped out below.
      */
-    class RrSubscriberGpsImpl : public rrobot::RrSubscriberGps
+    class RrSubscriberJoyImpl : public rrobot::RrSubscriberJoy
     {
       public:
-        RrSubscriberGpsImpl(std::shared_ptr<rrobot::RrStateMaintainer> state) : topic_param_("gps-topic"),
-                                                                                topic_(rr_constants::TOPIC_GPS_FIXED),
-                                                                                frame_id_(rr_constants::LINK_GPS),
+        RrSubscriberJoyImpl(std::shared_ptr<rrobot::RrStateMaintainer> state) : topic_param_("gps-topic"),
+                                                                                topic_(rr_constants::TOPIC_JOY),
+                                                                                frame_id_(rr_constants::LINK_JOY_PS4),
                                                                                 state_(state)
-
         {}
 
-        ~RrSubscriberGpsImpl() = default;
+        ~RrSubscriberJoyImpl() = default;
 
-        void callback(const sensor_msgs::msg::NavSatFix::SharedPtr) override;
+        void callback(const sensor_msgs::msg::Joy::SharedPtr) override;
 
         /**
          * @fn get_topic_param
@@ -126,30 +134,6 @@ namespace rr_common_plugins
         std::string topic_;
         std::string frame_id_;
         std::shared_ptr<rrobot::RrStateMaintainer> state_;
-    };
-
-    /**
-     * @class RrSubscriberJoyImpl
-     * 
-     * The following constants are true for PS4 joysticks not sure if it is true about all controllers.
-     * 
-     * Note lists for games controllers are split into two parts, sticks which are an anolog component which 
-     * gives a value between -1 to 1,  where 0 is centered. 
-     * 
-     * Buttons which are the various button values on the game controller, these are generally boolean values
-     * that can be represented as 1 or 0. Not all buttons are mapped out below.
-     */
-    class RrSubscriberJoyImpl : public RrSubscriberBase, rrobot::RrSubscriberJoy
-    {
-      public:
-        RrSubscriberJoyImpl()
-        {
-            this->initialize("joy-topic", rr_constants::TOPIC_JOY, rr_constants::LINK_JOY_PS4);
-        }
-
-        ~RrSubscriberJoyImpl() = default;
-
-        void callback(const sensor_msgs::msg::Joy::SharedPtr) override;
     };
 
     /**

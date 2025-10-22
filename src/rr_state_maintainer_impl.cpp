@@ -115,7 +115,7 @@ void RrStateMaintainerImpl::set_range(const sensor_msgs::msg::Range range)
     }
     
     ranges_.resize(ranges_.size() + 1);
-    ranges_[0] = range;
+    ranges_[ranges_.size() - 1] = range;
 }
 
 bool RrStateMaintainerImpl::has_ranges()

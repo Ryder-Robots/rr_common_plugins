@@ -1,27 +1,25 @@
-#ifndef RR_SUBSCRIBER_GPS_IMPL_HPP
-#define RR_SUBSCRIBER_GPS_IMPL_HPP
-
-#include "rr_common_plugins/rr_state_maintainer_impl.hpp"
+#ifndef @FILE_NAME_UC@
+#define @FILE_NAME_UC@
 
 namespace rr_common_plugins
 {
     /**
-     * @class RrSubscriberGps
-     * @brief implementation of GPS subscription service.
+     * @class @CLASS_NAME@
+     * @brief implementation of @CLASS_NAME@ which consumes @MSG_CLASS@
      */
-    class RrSubscriberGpsImpl : public rrobot::RrSubscriberGps
+    class @CLASS_NAME@ : public rrobot::RrSubscriberGps
     {
       public:
-        RrSubscriberGpsImpl(std::shared_ptr<rrobot::RrStateMaintainer> state) : topic_param_("gps-topic"),
-                                                                                topic_(rr_constants::TOPIC_GPS_FIXED),
-                                                                                frame_id_(rr_constants::LINK_GPS),
-                                                                                state_(state)
+        @CLASS_NAME@(std::shared_ptr<rrobot::RrStateMaintainer> state) : topic_param_("@TOPIC_PARAM@"),
+                                                                          topic_(@TOPIC@),
+                                                                          frame_id_(@FRAME_ID@),
+                                                                          state_(state)
 
         {}
 
-        ~RrSubscriberGpsImpl() = default;
+        ~@CLASS_NAME@() = default;
 
-        void callback(const sensor_msgs::msg::NavSatFix::SharedPtr) override;
+        void callback(const @MSG_CLASS@) override;
 
         /**
          * @fn get_topic_param
@@ -72,4 +70,4 @@ namespace rr_common_plugins
     };
 } // namespace rr_common_plugins
 
-#endif // RR_SUBSCRIBER_GPS_IMPL_HPP
+#endif //@FILE_NAME_UC@

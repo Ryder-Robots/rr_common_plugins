@@ -13,6 +13,8 @@ find_package(pluginlib REQUIRED)
 find_package(rr_common_base REQUIRED)
 find_package(rr_interfaces REQUIRED)
 
+add_subdirectory(include)
+
 add_library(rr_common_plugin 
   src/rr_state_maintainer_impl.cpp
   src/rr_subscriber_common_impl.cpp)

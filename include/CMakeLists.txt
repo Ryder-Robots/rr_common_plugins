@@ -6,6 +6,12 @@
   @ONLY
 )
 
+ configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/rr_state_maintainer_impl.hpp.in
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/rr_state_maintainer_impl.hpp
+  @ONLY
+)
+
 set(FILE_NAME "rr_subscriber_gps_impl")
 string(TOUPPER "${FILE_NAME}" FILE_NAME_UC)
 set(CLASS_NAME "RrSubscriberGpsImpl")

@@ -1,7 +1,11 @@
 #ifndef @FILE_NAME_UC@
 #define @FILE_NAME_UC@
 
-#include "rr_common_plugins/rr_state_maintainer_impl.hpp"
+#include "rclcpp/logging.hpp"
+#include "rr_common_base/rr_constants.hpp"
+#include "rr_common_base/rr_subscriber.hpp"
+#include "rr_common_plugins/visibility_control.h"
+#include <sensor_msgs/image_encodings.hpp>
 
 namespace rr_common_plugins
 {

@@ -1,6 +1,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rr_common_base/rr_constants.hpp"
-#include "rr_common_plugins/rr_common_subscribers.hpp"
+#include "rr_common_plugins/rr_subscriber_gps_impl.hpp"
 #include "rr_common_plugins/rr_state_maintainer_impl.hpp"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

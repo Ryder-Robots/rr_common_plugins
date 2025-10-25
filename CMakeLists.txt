@@ -36,10 +36,6 @@ ament_target_dependencies(
 target_compile_definitions(rr_common_plugin PRIVATE "RR_COMMON_PLUGINS_BUILDING_LIBRARY")
 
 install(
-  DIRECTORY include/
-  DESTINATION include/${PROJECT_NAME}
-)
-install(
   TARGETS rr_common_plugin
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib

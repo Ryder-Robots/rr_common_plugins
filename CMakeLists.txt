@@ -17,12 +17,17 @@ add_subdirectory(include)
 
 add_library(rr_common_plugin 
   src/rr_state_maintainer_impl.cpp
-  src/rr_subscriber_gps_impl.cpp)
+  src/rr_subscriber_gps_impl.cpp
+  src/rr_subscriber_joy_impl.cpp
+  src/rr_subscriber_batt_state_impl.cpp)
+
+target_include_directories(rr_common_plugin
+  PUBLIC
+     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+)
 
 target_compile_features(rr_common_plugin PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-target_include_directories(rr_common_plugin PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
+
 ament_target_dependencies(
   rr_common_plugin
   rclcpp
@@ -42,6 +47,14 @@ install(
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
+
+install(
+  DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
+  DESTINATION include  
+)
+
+get_target_property(INCLUDES rr_common_plugin INTERFACE_INCLUDE_DIRECTORIES)
+message(STATUS "Exposed include dirs for rr_common_plugin: ${INCLUDES}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

@@ -1,7 +1,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rr_common_base/rr_constants.hpp"
-#include "rr_common_plugins/rr_subscriber_gps_impl.hpp"
 #include "rr_common_plugins/rr_state_maintainer_impl.hpp"
+#include "rr_common_plugins/rr_subscriber_gps_impl.hpp"
+#include "rr_common_plugins/rr_subscriber_joy_impl.hpp"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -62,10 +63,65 @@ TEST_F(TestCommonSubscriber, gps)
     EXPECT_EQ(state_maintainer_->get_gps().status.status, sensor_msgs::msg::NavSatStatus::STATUS_FIX);
     EXPECT_EQ(state_maintainer_->get_gps().status.service, sensor_msgs::msg::NavSatStatus::SERVICE_GPS);
     EXPECT_NEAR(state_maintainer_->get_gps().latitude, -33.8688, 0.000009);
-    EXPECT_NEAR(state_maintainer_->get_gps().longitude,151.2093, 0.000009);
+    EXPECT_NEAR(state_maintainer_->get_gps().longitude, 151.2093, 0.000009);
     EXPECT_NEAR(state_maintainer_->get_gps().altitude, 58, 1);
 
     EXPECT_EQ(gps_callback->get_topic_default(), rr_constants::TOPIC_GPS_FIXED);
+}
+
+TEST_F(TestCommonSubscriber, joy)
+{
+    rclcpp::Clock clock;
+    auto current_time = clock.now();
+    auto msg = std::make_shared<sensor_msgs::msg::Joy>();
+
+    msg->header.stamp = current_time;
+    msg->header.frame_id = rr_constants::LINK_JOY_PS4;
+
+    msg->axes.resize(4);
+    auto it = msg->axes.begin();
+
+    std::advance(it, rr_constants::CTRL_AXIS_XL);
+    msg->axes.insert(it, 0.1f);
+
+    it = msg->axes.begin();
+    std::advance(it, rr_constants::CTRL_AXIS_YL);
+    msg->axes.insert(it, -0.8f);
+
+    it = msg->axes.begin();
+    std::advance(it, rr_constants::CTRL_AXIS_XR);
+    msg->axes.insert(it, 0.0);
+
+    it = msg->axes.begin();
+    std::advance(it, rr_constants::CTRL_AXIS_YR);
+    msg->axes.insert(it, 0.3f);
+
+    // fill up buffer to avoid nulls
+    msg->buttons.resize(14);
+    std::fill(msg->buttons.begin(), msg->buttons.end(), false);
+
+    auto it2 = msg->buttons.begin();
+    std::advance(it2, rr_constants::CTRL_X_BUTTON);
+    msg->buttons.insert(it2, true);
+
+    it2 = msg->buttons.begin();
+    std::advance(it2, rr_constants::CTRL_SCROLL_UP);
+    msg->buttons.insert(it2, true);
+
+    auto subscriber = std::make_shared<RrSubscriberJoyImpl>(state_maintainer_);
+    subscriber->callback(msg);
+
+    // From experience found controllers will start to lose precision over time, especially
+    // if you like first player shooters hahahahahahah, going with 0.0009 which is pretty arbitory
+    sensor_msgs::msg::Joy actual = state_maintainer_->get_joystick();
+    EXPECT_NEAR(actual.axes.at(rr_constants::CTRL_AXIS_XL), 0.1, 0.11);
+    EXPECT_NEAR(actual.axes.at(rr_constants::CTRL_AXIS_YL), -0.8, 0.81);
+    EXPECT_NEAR(actual.axes.at(rr_constants::CTRL_AXIS_YL), -0.8, 0.81);
+    EXPECT_NEAR(actual.axes.at(rr_constants::CTRL_AXIS_YR), 0.3, 0.31);
+    EXPECT_TRUE(actual.buttons.at(rr_constants::CTRL_X_BUTTON));
+    EXPECT_TRUE(actual.buttons.at(rr_constants::CTRL_SCROLL_UP));
+
+    EXPECT_TRUE(state_maintainer_->has_joystick());
 }
 
 int main(int argc, char **argv)

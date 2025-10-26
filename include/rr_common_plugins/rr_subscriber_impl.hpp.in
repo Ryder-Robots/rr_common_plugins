@@ -13,7 +13,7 @@ namespace rr_common_plugins
      * @class @CLASS_NAME@
      * @brief implementation of @CLASS_NAME@ which consumes @MSG_CLASS@
      */
-    class @CLASS_NAME@ : public rrobot::RrSubscriberGps
+    class @CLASS_NAME@ : public rrobot::@BASE_CLASS@
     {
       public:
         @CLASS_NAME@(std::shared_ptr<rrobot::RrStateMaintainer> state) : topic_param_("@TOPIC_PARAM@"),

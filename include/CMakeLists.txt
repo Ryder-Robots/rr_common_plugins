@@ -12,22 +12,27 @@
   @ONLY
 )
 
-set(FILE_NAME "rr_subscriber_gps_impl")
-string(TOUPPER "${FILE_NAME}" FILE_NAME_UC)
-set(CLASS_NAME "RrSubscriberGpsImpl")
-set(TOPIC_PARAM  "gps-topic")
-set(TOPIC  "rr_constants::TOPIC_GPS_FIXED")
-set(FRAME_ID  "rr_constants::LINK_GPS")
-set(MSG_CLASS  "sensor_msgs::msg::NavSatFix::SharedPtr")
-set(OUT "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/${FILE_NAME}.hpp")
+set(FILE_NAME_L "rr_subscriber_gps_impl;rr_subscriber_joy_impl;rr_batt_state_subscriber_impl;rr_image_subscriber_impl;rr_imu_subscriber_impl")
+set(CLASS_NAME_L "RrSubscriberGpsImpl;RrSubscriberJoyImpl;RrSubscriberBattStateImpl;RrImageSubscriberImpl;RrImuSubscriberImpl")
+set(TOPIC_PARAM_L  "gps-topic;joy-topic;batt-topic;rr-image-topic;rr-imu-topic")
+set(TOPIC_L  "rr_constants::TOPIC_GPS_FIXED;rr_constants::TOPIC_JOY;rr_constants::TOPIC_BATT_STATE;rr_constants::TOPIC_IMAGE_RAW;rr_constants::TOPIC_IMU")
+set(FRAME_ID_L  "rr_constants::LINK_GPS;rr_constants::LINK_JOY_PS4;rr_constants::LINK_BATT_STATE;rr_constants::LINK_CAM;rr_constants::LINK_IMU")
+set(MSG_CLASS_L  "sensor_msgs::msg::NavSatFix::SharedPtr;sensor_msgs::msg::Joy::SharedPtr;sensor_msgs::msg::BatteryState::SharedPtr;sensor_msgs::msg::Image::SharedPtr;sensor_msgs::msg::Imu::SharedPtr")
+set(BASE_CLASS_L "RrSubscriberGps;RrSubscriberJoy;RrSubscriberBattState;RrImageSubscriber;RrImuSubscriberImpl")
 
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/rr_subscriber_impl.hpp.in
-  ${OUT}
-  @ONLY
-)
-
-# install(
-#   DIRECTORY include/
-#   DESTINATION include/${PROJECT_NAME}
-# )
+foreach(FILE_NAME 
+  CLASS_NAME 
+  TOPIC_PARAM 
+  TOPIC
+  FRAME_ID
+  MSG_CLASS
+  BASE_CLASS
+IN ZIP_LISTS FILE_NAME_L CLASS_NAME_L TOPIC_PARAM_L TOPIC_L FRAME_ID_L MSG_CLASS_L BASE_CLASS_L)
+  set(OUT "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/${FILE_NAME}.hpp")
+  string(TOUPPER "${FILE_NAME}" FILE_NAME_UC)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/rr_subscriber_impl.hpp.in
+    ${OUT}
+    @ONLY
+  )
+endforeach()

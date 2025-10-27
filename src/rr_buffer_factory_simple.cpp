@@ -4,7 +4,12 @@ using namespace rr_common_plugins;
 
 
 /**
- * Creates simple callbacks.
+ * @fn initialize
+ * @brief Creates subscriber callbacks.
+ * 
+ * Note that according to https://docs.ros.org/en/jazzy/How-To-Guides/Using-callback-groups.html all callbacks that are controlled
+ * by the executor, however the factory implements its own callback group for subscriptions to avoid blocks by the nodes default
+ * callback group for the timer.
  */
 void RrBufferFactorySimple::initialize(rclcpp::Node::SharedPtr ctl, std::shared_ptr<rrobot::RrStateMaintainer> state_manager)
 {

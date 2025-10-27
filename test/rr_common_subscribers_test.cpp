@@ -52,10 +52,11 @@ TEST_F(TestCommonSubscriber, gps)
     msg_gps->position_covariance_type = sensor_msgs::msg::NavSatFix::COVARIANCE_TYPE_UNKNOWN;
 
     // initlization of callback.
-    auto gps_callback = std::make_shared<RrSubscriberGpsImpl>(state_maintainer_);
+    auto subscriber = RrSubscriberGpsImpl();
+    subscriber.set_state_handler(state_maintainer_);
 
     // running the callback
-    gps_callback->callback(msg_gps);
+    subscriber.callback(msg_gps);
 
     EXPECT_TRUE(state_maintainer_->has_gps());
     EXPECT_EQ(state_maintainer_->get_gps().header.stamp, current_time);
@@ -66,7 +67,7 @@ TEST_F(TestCommonSubscriber, gps)
     EXPECT_NEAR(state_maintainer_->get_gps().longitude, 151.2093, 0.000009);
     EXPECT_NEAR(state_maintainer_->get_gps().altitude, 58, 1);
 
-    EXPECT_EQ(gps_callback->get_topic_default(), rr_constants::TOPIC_GPS_FIXED);
+    EXPECT_EQ(subscriber.get_topic_default(), rr_constants::TOPIC_GPS_FIXED);
 }
 
 TEST_F(TestCommonSubscriber, joy)
@@ -108,8 +109,9 @@ TEST_F(TestCommonSubscriber, joy)
     std::advance(it2, rr_constants::CTRL_SCROLL_UP);
     msg->buttons.insert(it2, true);
 
-    auto subscriber = std::make_shared<RrSubscriberJoyImpl>(state_maintainer_);
-    subscriber->callback(msg);
+    auto subscriber = RrSubscriberJoyImpl();
+    subscriber.set_state_handler(state_maintainer_);
+    subscriber.callback(msg);
 
     // From experience found controllers will start to lose precision over time, especially
     // if you like first player shooters hahahahahahah, going with 0.0009 which is pretty arbitory

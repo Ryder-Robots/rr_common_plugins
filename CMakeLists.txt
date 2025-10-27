@@ -17,9 +17,11 @@ add_subdirectory(include)
 
 add_library(rr_common_plugin 
   src/rr_state_maintainer_impl.cpp
+  src/rr_subscriber_image_impl.cpp
   src/rr_subscriber_gps_impl.cpp
   src/rr_subscriber_joy_impl.cpp
-  src/rr_subscriber_batt_state_impl.cpp)
+  src/rr_subscriber_batt_state_impl.cpp
+  src/rr_buffer_factory_simple.cpp)
 
 target_include_directories(rr_common_plugin
   PUBLIC

@@ -16,11 +16,9 @@ namespace rr_common_plugins
     class @CLASS_NAME@ : public rrobot::@BASE_CLASS@
     {
       public:
-        @CLASS_NAME@(std::shared_ptr<rrobot::RrStateMaintainer> state) : topic_param_("@TOPIC_PARAM@"),
+        @CLASS_NAME@() : topic_param_("@TOPIC_PARAM@"),
                                                                           topic_(@TOPIC@),
-                                                                          frame_id_(@FRAME_ID@),
-                                                                          state_(state)
-
+                                                                          frame_id_(@FRAME_ID@)
         {}
 
         ~@CLASS_NAME@() = default;

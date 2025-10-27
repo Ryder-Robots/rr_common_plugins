@@ -1,14 +1,21 @@
  # Configure external include files for plugins
  
- configure_file(
+configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/visibility_control.h.in 
   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/visibility_control.h
   @ONLY
 )
 
- configure_file(
+configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/rr_state_maintainer_impl.hpp.in
   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/rr_state_maintainer_impl.hpp
+  @ONLY
+)
+
+## Create factories
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/rr_buffer_factory_simple.hpp.in
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/rr_buffer_factory_simple.hpp
   @ONLY
 )
 

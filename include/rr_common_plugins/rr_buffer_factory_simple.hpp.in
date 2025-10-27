@@ -1,0 +1,33 @@
+#ifndef RR_BUFFER_FACTORY_SIMPLE_HPP
+#define RR_BUFFER_FACTORY_SIMPLE_HPP
+
+#include "rclcpp/rclcpp.hpp"
+#include "rr_common_base/rr_buf_factory.hpp"
+#include "rr_common_plugins/rr_image_subscriber_impl.hpp"
+#include "rr_common_plugins/rr_state_maintainer_impl.hpp"
+
+namespace rr_common_plugins
+{
+    /**
+     * @class RrBufferFactorySimple
+     * @brief creates simple buffer service that is used to test sensors.
+     */
+    class RrBufferFactorySimple : public rrobot::RrBufFactory
+    {
+      public:
+        /**
+         * @fn initialize
+         * @brief initialize all subscribers that the buffer will use.
+         */
+        void initialize(rclcpp::Node::SharedPtr ctl, std::shared_ptr<rrobot::RrStateMaintainer> state_manager) override;
+        void tear_down() override;
+
+       private:
+        rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr img_subscription_;
+        rclcpp::Node::SharedPtr ctl_;
+
+        RrImageSubscriberImpl image_subscriber_;
+    };
+} // namespace rr_common_plugins
+
+#endif

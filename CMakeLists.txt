@@ -15,7 +15,7 @@ find_package(rr_interfaces REQUIRED)
 
 add_subdirectory(include)
 
-add_library(rr_common_plugin 
+add_library(rr_common_plugins 
   src/rr_state_maintainer_impl.cpp
   src/rr_subscriber_image_impl.cpp
   src/rr_subscriber_gps_impl.cpp
@@ -23,15 +23,15 @@ add_library(rr_common_plugin
   src/rr_subscriber_batt_state_impl.cpp
   src/rr_buffer_factory_simple.cpp)
 
-target_include_directories(rr_common_plugin
+target_include_directories(rr_common_plugins
   PUBLIC
      $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
 )
 
-target_compile_features(rr_common_plugin PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(rr_common_plugins PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
 ament_target_dependencies(
-  rr_common_plugin
+  rr_common_plugins
   rclcpp
   rr_interfaces
   "pluginlib"
@@ -40,10 +40,10 @@ ament_target_dependencies(
 
 # Causes the visibility macros to use dllexport rather than dllimport,
 # which is appropriate when building the dll but not consuming it.
-target_compile_definitions(rr_common_plugin PRIVATE "RR_COMMON_PLUGINS_BUILDING_LIBRARY")
+target_compile_definitions(rr_common_plugins PRIVATE "RR_COMMON_PLUGINS_BUILDING_LIBRARY")
 
 install(
-  TARGETS rr_common_plugin
+  TARGETS rr_common_plugins
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -55,8 +55,8 @@ install(
   DESTINATION include  
 )
 
-get_target_property(INCLUDES rr_common_plugin INTERFACE_INCLUDE_DIRECTORIES)
-message(STATUS "Exposed include dirs for rr_common_plugin: ${INCLUDES}")
+get_target_property(INCLUDES rr_common_plugins INTERFACE_INCLUDE_DIRECTORIES)
+message(STATUS "Exposed include dirs for rr_common_plugins: ${INCLUDES}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -77,7 +77,7 @@ ament_export_include_directories(
   "include/${PROJECT_NAME}"
 )
 ament_export_libraries(
-  rr_common_plugin
+  rr_common_plugins
 )
 ament_export_targets(
   export_${PROJECT_NAME}

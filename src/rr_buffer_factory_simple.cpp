@@ -34,3 +34,5 @@ void RrBufferFactorySimple::tear_down()
 {
     RCLCPP_INFO(ctl_->get_logger(), "deconstructing factory");
 }
+
+PLUGINLIB_EXPORT_CLASS(rr_common_plugins::RrBufferFactorySimple, rrobot::RrBufFactory)

@@ -12,3 +12,5 @@ void RrSubscriberGpsImpl::callback(const sensor_msgs::msg::NavSatFix::SharedPtr 
     RCLCPP_DEBUG(logger_, "received message GPS msg");
     state_->set_gps(*msg);
 }
+
+PLUGINLIB_EXPORT_CLASS(rr_common_plugins::RrSubscriberGpsImpl, rrobot::RrSubscriberGps)

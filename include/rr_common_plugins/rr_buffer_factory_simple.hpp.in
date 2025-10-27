@@ -5,6 +5,7 @@
 #include "rr_common_base/rr_buf_factory.hpp"
 #include "rr_common_plugins/rr_image_subscriber_impl.hpp"
 #include "rr_common_plugins/rr_state_maintainer_impl.hpp"
+#include "pluginlib/class_list_macros.hpp"
 
 namespace rr_common_plugins
 {

@@ -11,3 +11,5 @@ void RrImageSubscriberImpl::callback(const sensor_msgs::msg::Image::SharedPtr ms
     RCLCPP_DEBUG(logger_, "received message image msg");
     state_->set_image(*msg);
 }
+
+PLUGINLIB_EXPORT_CLASS(rr_common_plugins::RrImageSubscriberImpl, rrobot::RrImageSubscriber)

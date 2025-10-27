@@ -2,6 +2,7 @@
 #define @FILE_NAME_UC@
 
 #include "rclcpp/logging.hpp"
+#include "pluginlib/class_list_macros.hpp"
 #include "rr_common_base/rr_constants.hpp"
 #include "rr_common_base/rr_subscriber.hpp"
 #include "rr_common_plugins/visibility_control.h"

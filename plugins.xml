@@ -11,10 +11,7 @@
         <name>RrSubscriberBattState</name>
         <description>Battery state subscriber Implementation</description>
     </class>
-    <class type="rr_common_plugins::RrImageSubscriberImpl" base_class_type="rrobot::RrImageSubscriber">
-        <name>RrImageSubscriber</name>
-        <description>Image subscriber Implementation</description>
-    </class>
+
     <class type="rr_common_plugins::RrImuSubscriberImpl" base_class_type="rrobot::RrImuSubscriber">
         <name>RrImuSubscriber</name>
         <description>IMU subscriber Implementation</description>
@@ -38,5 +35,10 @@
     <class type="rr_common_plugins::RrStateMaintainerImpl" base_class_type="rrobot::RrStateMaintainer">
         <name>RrStateMaintainer</name>
         <description>Maintains state within the nodes and provides common state mechanics for other subscribers, actions, and publishers</description>
+    </class>
+
+    <class type="rr_common_plugins::RrBufferFactorySimple" base_class_type="rrobot::RrBufFactory">
+        <name>RrBufferFactorySimple</name>
+        <description>Imple Buffer factory aimed to provide tests for functionality</description>
     </class>
 </library>

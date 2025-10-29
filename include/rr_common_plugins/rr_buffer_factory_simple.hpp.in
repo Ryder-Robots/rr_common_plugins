@@ -23,11 +23,17 @@ namespace rr_common_plugins
         void initialize(rclcpp::Node::SharedPtr ctl, std::shared_ptr<rrobot::RrStateMaintainer> state_manager) override;
         void tear_down() override;
 
+        rclcpp::CallbackGroup::SharedPtr sub_img_group() override {return sub_img_group_;}
+        rclcpp::CallbackGroup::SharedPtr sub_sensor_group() override {return sub_sensor_group_;}
+
        private:
         rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr img_subscription_;
         rclcpp::Node::SharedPtr ctl_;
 
         RrImageSubscriberImpl image_subscriber_;
+
+        rclcpp::CallbackGroup::SharedPtr sub_img_group_;
+        rclcpp::CallbackGroup::SharedPtr sub_sensor_group_;
     };
 } // namespace rr_common_plugins
 

@@ -15,9 +15,9 @@ void RrBufferFactorySimple::initialize(rclcpp::Node::SharedPtr ctl, std::shared_
 {
     ctl_ = ctl;
     RCLCPP_INFO(ctl_->get_logger(), "creating callback group(s)");
-    auto cg = ctl_->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+    sub_img_group_ = ctl_->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
     rclcpp::SubscriptionOptions options;
-    options.callback_group = cg;
+    options.callback_group = sub_img_group_;
 
     RCLCPP_INFO(ctl_->get_logger(), "getting image subscriber params");
     ctl_->declare_parameter(image_subscriber_.get_topic_param(), image_subscriber_.get_topic_default());

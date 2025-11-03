@@ -82,19 +82,19 @@ TEST_F(TestCommonSubscriber, joy)
     msg->axes.resize(4);
     auto it = msg->axes.begin();
 
-    std::advance(it, rr_constants::CTRL_AXIS_XL);
+    std::advance(it, rr_constants::JOY_AXES_LEFTX);
     msg->axes.insert(it, 0.1f);
 
     it = msg->axes.begin();
-    std::advance(it, rr_constants::CTRL_AXIS_YL);
+    std::advance(it, rr_constants::JOY_AXES_LEFTY);
     msg->axes.insert(it, -0.8f);
 
     it = msg->axes.begin();
-    std::advance(it, rr_constants::CTRL_AXIS_XR);
+    std::advance(it, rr_constants::JOY_AXES_RIGHTX);
     msg->axes.insert(it, 0.0);
 
     it = msg->axes.begin();
-    std::advance(it, rr_constants::CTRL_AXIS_YR);
+    std::advance(it, rr_constants::JOY_AXES_RIGHTY);
     msg->axes.insert(it, 0.3f);
 
     // fill up buffer to avoid nulls
@@ -102,11 +102,11 @@ TEST_F(TestCommonSubscriber, joy)
     std::fill(msg->buttons.begin(), msg->buttons.end(), false);
 
     auto it2 = msg->buttons.begin();
-    std::advance(it2, rr_constants::CTRL_X_BUTTON);
+    std::advance(it2, rr_constants::JOY_A_CROSS);
     msg->buttons.insert(it2, true);
 
     it2 = msg->buttons.begin();
-    std::advance(it2, rr_constants::CTRL_SCROLL_UP);
+    std::advance(it2, rr_constants::JOY_DPAD_UP);
     msg->buttons.insert(it2, true);
 
     auto subscriber = RrSubscriberJoyImpl();
@@ -116,12 +116,12 @@ TEST_F(TestCommonSubscriber, joy)
     // From experience found controllers will start to lose precision over time, especially
     // if you like first player shooters hahahahahahah, going with 0.0009 which is pretty arbitory
     sensor_msgs::msg::Joy actual = state_maintainer_->get_joystick();
-    EXPECT_NEAR(actual.axes.at(rr_constants::CTRL_AXIS_XL), 0.1, 0.11);
-    EXPECT_NEAR(actual.axes.at(rr_constants::CTRL_AXIS_YL), -0.8, 0.81);
-    EXPECT_NEAR(actual.axes.at(rr_constants::CTRL_AXIS_YL), -0.8, 0.81);
-    EXPECT_NEAR(actual.axes.at(rr_constants::CTRL_AXIS_YR), 0.3, 0.31);
-    EXPECT_TRUE(actual.buttons.at(rr_constants::CTRL_X_BUTTON));
-    EXPECT_TRUE(actual.buttons.at(rr_constants::CTRL_SCROLL_UP));
+    EXPECT_NEAR(actual.axes.at(rr_constants::JOY_AXES_LEFTX), 0.1, 0.11);
+    EXPECT_NEAR(actual.axes.at(rr_constants::JOY_AXES_LEFTY), -0.8, 0.81);
+    EXPECT_NEAR(actual.axes.at(rr_constants::JOY_AXES_RIGHTX), -0.8, 0.81);
+    EXPECT_NEAR(actual.axes.at(rr_constants::JOY_AXES_RIGHTY), 0.3, 0.31);
+    EXPECT_TRUE(actual.buttons.at(rr_constants::JOY_A_CROSS));
+    EXPECT_TRUE(actual.buttons.at(rr_constants::JOY_DPAD_UP));
 
     EXPECT_TRUE(state_maintainer_->has_joystick());
 }

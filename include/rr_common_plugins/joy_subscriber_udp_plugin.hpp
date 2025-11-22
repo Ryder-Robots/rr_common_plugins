@@ -34,8 +34,8 @@ namespace rrobots
          * @class RrJoySubscriberUdpPlugin
          * @brief Creates subscription with UDP transport drivers, as a plugin.
          * 
-         * Designed to deserialize joystick messages send via UDP by transport drivers udp_sendor_node.
-         * Nodes are expected to use plugin library initilize this plugin, and use interfaces::RrNodeJoyPluginIface
+         * Designed to deserialize joystick messages sent via UDP by transport drivers udp_sender_node.
+         * Nodes are expected to use the plugin library to initialize this plugin, and use interfaces::RrNodeJoyPluginIface
          * as the communication interface, thus reducing coupling.
          */
         class RrJoySubscriberUdpPlugin : public interfaces::RrNodeJoyPluginIface
@@ -43,7 +43,7 @@ namespace rrobots
           public:
             using CallbackTypeP = std::function<void(const sensor_msgs::msg::Joy &)>;
 
-            RrJoySubscriberUdpPlugin() {}
+            RrJoySubscriberUdpPlugin() = default;
 
             ~RrJoySubscriberUdpPlugin() = default;
 
@@ -51,7 +51,7 @@ namespace rrobots
              * @fn configure
              * @brief creates callback within plugin.
              * 
-             * expected to be called during the configure section of a lifecycle node.
+             * Called during the configure phase of the lifecycle node.
              * 
              * @param state nodes previous state when this method is called
              * @param callback to execute on subscription, this must std::function<void(const sensor_msgs::msg::Joy &)>
@@ -59,14 +59,42 @@ namespace rrobots
              */
             [[nodiscard]] LNI::CallbackReturn configure(const lc::State &state, CallbackTypeP cb) override;
 
+            /**
+             * @fn on_activate
+             * @brief activates the plugin
+             * 
+             * creates subscription and starts listening to ingress UDP packets
+             * 
+             * @param state nodes previous state when this method is called
+             * @return CallbackReturn returns status result of method.
+             */
             [[nodiscard]] LNI::CallbackReturn on_activate(const lc::State &state) override;
 
+            /**
+             * @fn on_deactivate
+             * @brief stops the subscriber.
+             * 
+             * stops the subscriber, this can occur before shutdown, or when lifecycle node is adjusting
+             * frame frequency.
+             * 
+             * @param state nodes previous state when this method is called
+             * @return CallbackReturn returns status result of method.
+             */
             [[nodiscard]] LNI::CallbackReturn on_deactivate(const lc::State &state) override;
 
+            /**
+             * @fn on_cleanup
+             * @brief resets local variables
+             * 
+             * cleans up memory, this is done before shutdown is performed.
+             * 
+             * @param state nodes previous state when this method is called
+             * @return CallbackReturn returns status result of method.
+             */
             [[nodiscard]] LNI::CallbackReturn on_cleanup(const lc::State &state) override;
 
           private:
-            rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr subscription_;
+            rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr subscription_ = nullptr;
         };
     } // namespace rr_joy_plugin
 } // namespace rrobots

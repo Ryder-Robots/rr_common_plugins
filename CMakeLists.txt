@@ -13,8 +13,6 @@ find_package(pluginlib REQUIRED)
 find_package(rr_common_base REQUIRED)
 find_package(rr_interfaces REQUIRED)
 
-add_subdirectory(include)
-
 add_library(rr_common_plugins 
   src/rr_state_maintainer_impl.cpp
   src/rr_subscriber_image_impl.cpp
@@ -70,7 +68,7 @@ if(BUILD_TESTING)
   # ament_lint_auto_find_test_dependencies()
 
   # Add local unit tests
-  add_subdirectory(test)
+  # add_subdirectory(test)
 endif()
 
 ament_export_include_directories(

@@ -20,6 +20,8 @@
 
 #include "rr_common_plugins/joy_subscriber_udp_plugin.hpp"
 
+using namespace std::placeholders;
+
 namespace rr_common_plugins::rr_udp_plugins
 {
     /**
@@ -29,6 +31,10 @@ namespace rr_common_plugins::rr_udp_plugins
     {
         RCLCPP_DEBUG(node_->get_logger(), "configuring RrJoySubscriberUdpPlugin");
         (void)state;
+        if (node_ == nullptr || cb_ == nullptr) {
+            RCLCPP_ERROR(node_->get_logger(), "node is not defined, cannot activate");
+            return LNI::CallbackReturn::FAILURE;
+        }
         cb_ = cb;
         node_ = node;
 

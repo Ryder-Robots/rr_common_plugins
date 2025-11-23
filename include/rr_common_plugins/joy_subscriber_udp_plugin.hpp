@@ -21,14 +21,13 @@
 #ifndef JOY_SUBSCRIBER_UDP_PLUGIN_HPP
 #define JOY_SUBSCRIBER_UDP_PLUGIN_HPP
 
-#include <memory>
-#include <pluginlib/class_list_macros.hpp>
-#include "udp_msgs/msg/udp_packet.hpp"
-#include "sensor_msgs/msg/joy.hpp"
 #include "rr_common_base/rr_node_joy_plugin_iface.hpp"
 #include "rr_common_plugins/generated/rr_client.pb.h"
+#include "sensor_msgs/msg/joy.hpp"
+#include "udp_msgs/msg/udp_packet.hpp"
+#include <memory>
+#include <pluginlib/class_list_macros.hpp>
 
-using namespace std::placeholders;
 
 namespace rr_common_plugins
 {
@@ -44,11 +43,15 @@ namespace rr_common_plugins
          */
         class RrJoySubscriberUdpPlugin : public rrobots::interfaces::RrNodeJoyPluginIface
         {
-        public:
+          public:
             using CallbackT = std::function<void(const sensor_msgs::msg::Joy &)>;
 
             explicit RrJoySubscriberUdpPlugin() = default;
             ~RrJoySubscriberUdpPlugin() = default;
+
+            // Delete copy constructor and copy assignment operator
+            RrJoySubscriberUdpPlugin(const RrJoySubscriberUdpPlugin &) = delete;
+            RrJoySubscriberUdpPlugin &operator=(const RrJoySubscriberUdpPlugin &) = delete;
 
             /**
              * @fn configure
@@ -97,15 +100,15 @@ namespace rr_common_plugins
              */
             [[nodiscard]] LNI::CallbackReturn on_cleanup(const lc::State &state) override;
 
-        private:
+          private:
             sensor_msgs::msg::Joy deserialize(InboundMessage &packet);
             rclcpp::Subscription<udp_msgs::msg::UdpPacket>::SharedPtr subscription_ = nullptr;
             rclcpp::Node::SharedPtr node_ = nullptr;
             CallbackT cb_ = nullptr;
-            std::function<void(const udp_msgs::msg::UdpPacket::UniquePtr & packet)> plugin_cb_ = nullptr;
-            void subscriber_callback(const udp_msgs::msg::UdpPacket::UniquePtr & packet);
+            std::function<void(const udp_msgs::msg::UdpPacket::UniquePtr &packet)> plugin_cb_ = nullptr;
+            void subscriber_callback(const udp_msgs::msg::UdpPacket::UniquePtr &packet);
         };
-    }
-}
+    } // namespace rr_udp_plugins
+} // namespace rr_common_plugins
 
 #endif // JOY_SUBSCRIBER_UDP_PLUGIN_HPP

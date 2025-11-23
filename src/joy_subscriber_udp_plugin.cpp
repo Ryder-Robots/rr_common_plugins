@@ -27,7 +27,7 @@ namespace rr_common_plugins::rr_udp_plugins
      */
     LNI::CallbackReturn RrJoySubscriberUdpPlugin::configure(const lc::State &state, CallbackT cb, rclcpp::Node::SharedPtr node)
     {
-        RCLCPP_DEBUG(logger_, "configuring RrJoySubscriberUdpPlugin");
+        RCLCPP_DEBUG(node_->get_logger(), "configuring RrJoySubscriberUdpPlugin");
         (void)state;
         cb_ = cb;
         node_ = node;
@@ -42,10 +42,10 @@ namespace rr_common_plugins::rr_udp_plugins
      */
     LNI::CallbackReturn RrJoySubscriberUdpPlugin::on_activate(const lc::State &state)
     {
-        RCLCPP_DEBUG(logger_, "activating RrJoySubscriberUdpPlugin");
+        RCLCPP_DEBUG(node_->get_logger(), "activating RrJoySubscriberUdpPlugin");
         (void)state;
         if (node_ == nullptr || cb_ == nullptr) {
-            RCLCPP_ERROR(logger_, "node is not defined, cannot activate");
+            RCLCPP_ERROR(node_->get_logger(), "node is not defined, cannot activate");
             return LNI::CallbackReturn::FAILURE;
         }
         rclcpp::SubscriptionOptions options;
@@ -56,11 +56,41 @@ namespace rr_common_plugins::rr_udp_plugins
 
 
     /**
+     * For testability deserializer has been moved to this routine.
+     */
+    sensor_msgs::msg::Joy RrJoySubscriberUdpPlugin::deserialize(InboundMessage &packet)
+    {
+        Joystick *joystick_data = packet.mutable_joystick();
+        sensor_msgs::msg::Joy joy;
+        joy.axes.reserve(joystick_data->axes_size());
+        joy.axes.resize(joystick_data->axes_size());
+        for (float a : joystick_data->axes()) {
+            joy.axes.push_back(a);
+        }
+
+        joy.buttons.reserve(joy.buttons.size());
+        joy.buttons.resize(joy.buttons.size());
+        for (int b : joystick_data->buttons()) {
+            joy.buttons.push_back(b);
+        }
+        return joy;
+    }
+
+    /**
      * called for any UDP packet, but only executes parents node callback if message is a Joy.
      */
-    void RrJoySubscriberUdpPlugin::subscriber_callback(const udp_msgs::msg::UdpPacket::UniquePtr &packet)
+    void RrJoySubscriberUdpPlugin::subscriber_callback(const udp_msgs::msg::UdpPacket::UniquePtr &udp_packet)
     {
-        RCLCPP_DEBUG(logger_, "deserializing packet RrJoySubscriberUdpPlugin");
+        RCLCPP_DEBUG(node_->get_logger(), "deserializing packet RrJoySubscriberUdpPlugin");
+        InboundMessage packet;
+        packet.ParseFromArray(udp_packet->data.data(), udp_packet->data.size());
+
+        // leave callback if there isn't a joystick message.
+        if (!packet.has_joystick()) {
+            return;
+        }
+
+        cb_(deserialize(packet));
     }
 
     /**
@@ -69,10 +99,12 @@ namespace rr_common_plugins::rr_udp_plugins
     LNI::CallbackReturn RrJoySubscriberUdpPlugin::on_cleanup(const lc::State &state)
     {
         (void)state;
-        RCLCPP_DEBUG(logger_, "cleaning RrJoySubscriberUdpPlugin");
+        RCLCPP_DEBUG(node_->get_logger(), "cleaning RrJoySubscriberUdpPlugin");
         if (subscription_ != nullptr) {
             subscription_.reset();
         }
         return LNI::CallbackReturn::SUCCESS;
     }
 } // namespace rr_common_plugins::rr_udp_plugins
+
+PLUGINLIB_EXPORT_CLASS(rr_common_plugins::rr_udp_plugins::RrJoySubscriberUdpPlugin, rrobots::interfaces::RrNodeJoyPluginIface)

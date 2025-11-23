@@ -22,7 +22,9 @@
 #define JOY_SUBSCRIBER_UDP_PLUGIN_HPP
 
 #include <memory>
+#include <pluginlib/class_list_macros.hpp>
 #include "udp_msgs/msg/udp_packet.hpp"
+#include "sensor_msgs/msg/joy.hpp"
 #include "rr_common_base/rr_node_joy_plugin_iface.hpp"
 #include "rr_common_plugins/generated/rr_client.pb.h"
 
@@ -45,7 +47,7 @@ namespace rr_common_plugins
         public:
             using CallbackT = std::function<void(const sensor_msgs::msg::Joy &)>;
 
-            RrJoySubscriberUdpPlugin() = default;
+            explicit RrJoySubscriberUdpPlugin() = default;
             ~RrJoySubscriberUdpPlugin() = default;
 
             /**
@@ -96,11 +98,11 @@ namespace rr_common_plugins
             [[nodiscard]] LNI::CallbackReturn on_cleanup(const lc::State &state) override;
 
         private:
+            sensor_msgs::msg::Joy deserialize(InboundMessage &packet);
             rclcpp::Subscription<udp_msgs::msg::UdpPacket>::SharedPtr subscription_ = nullptr;
             rclcpp::Node::SharedPtr node_ = nullptr;
             CallbackT cb_ = nullptr;
             std::function<void(const udp_msgs::msg::UdpPacket::UniquePtr & packet)> plugin_cb_ = nullptr;
-            rclcpp::Logger logger_;
             void subscriber_callback(const udp_msgs::msg::UdpPacket::UniquePtr & packet);
         };
     }

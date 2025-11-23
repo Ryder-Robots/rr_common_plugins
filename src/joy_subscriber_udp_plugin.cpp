@@ -79,6 +79,9 @@ namespace rr_common_plugins::rr_udp_plugins
         for (int b : joystick_data->buttons()) {
             joy.buttons.push_back(b);
         }
+
+        joy.header.stamp = node_->now();
+        joy.header.frame_id = rr_constants::LINK_JOY_PS4;
         return joy;
     }
 

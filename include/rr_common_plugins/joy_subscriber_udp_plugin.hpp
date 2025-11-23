@@ -21,6 +21,7 @@
 #ifndef JOY_SUBSCRIBER_UDP_PLUGIN_HPP
 #define JOY_SUBSCRIBER_UDP_PLUGIN_HPP
 
+#include "rr_common_base/rr_constants.hpp"
 #include "rr_common_base/rr_node_joy_plugin_iface.hpp"
 #include "rr_common_plugins/generated/rr_client.pb.h"
 #include "sensor_msgs/msg/joy.hpp"

@@ -22,8 +22,8 @@
 #define JOY_SUBSCRIBER_UDP_PLUGIN_HPP
 
 #include <memory>
-#include "rr_common_base/rr_node_joy_plugin_iface.hpp"
 #include "udp_msgs/msg/udp_packet.hpp"
+#include "rr_common_base/rr_node_joy_plugin_iface.hpp"
 
 using namespace std::placeholders;
 

@@ -21,24 +21,34 @@ find_package(Protobuf REQUIRED)
 
 FetchContent_Declare(
   rr_proto
-  URL https://github.com/Ryder-Robots/rr_proto/releases/download/0.0.1-DEVEL/proto.tar.gz
-  URL_HASH SHA256=c705cb1d1e37050a4a00e1cf3268c9255f2c68b5cead51c33bfa4f74946a66b0
+  URL https://github.com/Ryder-Robots/rr_proto/archive/refs/tags/0.0.1-DEVEL.tar.gz
+  GIT_TAG 0.0.1-DEVEL
   SOURCE_SUBDIR proto
 )
 FetchContent_MakeAvailable(rr_proto)
 
-set(PROTO_FILES ${rr_proto_SOURCE_DIR}/inbound.proto)
 
-# # Generate source and header from proto files 
+set(PROTOC_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+file(MAKE_DIRECTORY "${PROTOC_OUT_DIR}")
+set(PROTO_FILES ${rr_proto_SOURCE_DIR}/proto/rr_client.proto)
+
+message(STATUS "PROTPROTOC_OUT_DIR_FILES: ${PROTOC_OUT_DIR}")
+message(STATUS "PROTO_FILES: ${PROTO_FILES}")
+
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS 
   ${PROTO_FILES}
-  PROTOC_OUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}/generated"
+  PROTOC_OUT_DIR "${PROTOC_OUT_DIR}"
 )
 
-add_library(rr_common_plugins src/joy_subscriber_udp_plugin.cpp)
+add_library(rr_common_plugins 
+  src/joy_subscriber_udp_plugin.cpp
+  ${PROTO_SRCS} 
+  ${PROTO_HDRS})
+
 add_library(rr_common_plugins::rr_common_plugins ALIAS rr_common_plugins)
 target_compile_features(rr_common_plugins PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 target_include_directories(rr_common_plugins PUBLIC
+  ${Protobuf_INCLUDE_DIRS} 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 target_link_libraries(
@@ -50,6 +60,7 @@ target_link_libraries(
   ${lifecycle_msgs_TARGETS}
   ${rclcpp_lifecycle_TARGETS}
   ${udp_msgs_TARGETS}
+  ${protobuf_TARGETS}
 )
 
 # Causes the visibility macros to use dllexport rather than dllimport,

@@ -60,6 +60,7 @@ namespace rr_common_plugins::rr_udp_plugins
      */
     void RrJoySubscriberUdpPlugin::subscriber_callback(const udp_msgs::msg::UdpPacket::UniquePtr &packet)
     {
+        RCLCPP_DEBUG(logger_, "deserializing packet RrJoySubscriberUdpPlugin");
     }
 
     /**

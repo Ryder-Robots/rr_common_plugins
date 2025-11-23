@@ -27,6 +27,7 @@ namespace rr_common_plugins::rr_udp_plugins
      */
     LNI::CallbackReturn RrJoySubscriberUdpPlugin::configure(const lc::State &state, CallbackT cb, rclcpp::Node::SharedPtr node)
     {
+        RCLCPP_DEBUG(logger_, "configuring RrJoySubscriberUdpPlugin");
         (void)state;
         cb_ = cb;
         node_ = node;
@@ -39,15 +40,16 @@ namespace rr_common_plugins::rr_udp_plugins
     /**
      * Create binding routine to callback that will be used.
      */
-    LNI::CallbackReturn RrJoySubscriberUdpPlugin::on_activate(const lc::State &state) {
+    LNI::CallbackReturn RrJoySubscriberUdpPlugin::on_activate(const lc::State &state)
+    {
+        RCLCPP_DEBUG(logger_, "activating RrJoySubscriberUdpPlugin");
         (void)state;
-
         if (node_ == nullptr || cb_ == nullptr) {
             RCLCPP_ERROR(logger_, "node is not defined, cannot activate");
             return LNI::CallbackReturn::FAILURE;
         }
         rclcpp::SubscriptionOptions options;
-        subscription_ = node_->create_subscription<udp_msgs::msg::UdpPacket>("/udp_read",rclcpp::SensorDataQoS(), plugin_cb_);
+        subscription_ = node_->create_subscription<udp_msgs::msg::UdpPacket>("/udp_read", rclcpp::SensorDataQoS(), plugin_cb_);
 
         return LNI::CallbackReturn::SUCCESS;
     }
@@ -56,7 +58,20 @@ namespace rr_common_plugins::rr_udp_plugins
     /**
      * called for any UDP packet, but only executes parents node callback if message is a Joy.
      */
-    void RrJoySubscriberUdpPlugin::subscriber_callback(const udp_msgs::msg::UdpPacket::UniquePtr& packet) {
-
+    void RrJoySubscriberUdpPlugin::subscriber_callback(const udp_msgs::msg::UdpPacket::UniquePtr &packet)
+    {
     }
-} // namespace rr_common_plugins
+
+    /**
+     * reset all variables, not that once this routine is called, it will need to re-configured
+     */
+    LNI::CallbackReturn RrJoySubscriberUdpPlugin::on_cleanup(const lc::State &state)
+    {
+        (void)state;
+        RCLCPP_DEBUG(logger_, "cleaning RrJoySubscriberUdpPlugin");
+        if (subscription_ != nullptr) {
+            subscription_.reset();
+        }
+        return LNI::CallbackReturn::SUCCESS;
+    }
+} // namespace rr_common_plugins::rr_udp_plugins

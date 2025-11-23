@@ -27,8 +27,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(rr_proto)
 
-
-set(PROTOC_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(PROTOC_OUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/rr_common_plugins/generated")
 file(MAKE_DIRECTORY "${PROTOC_OUT_DIR}")
 set(PROTO_FILES ${rr_proto_SOURCE_DIR}/proto/rr_client.proto)
 
@@ -63,12 +62,14 @@ target_link_libraries(
   ${protobuf_TARGETS}
 )
 
+message(STATUS "PROTO_HDRS: ${PROTO_HDRS}")
+
 # Causes the visibility macros to use dllexport rather than dllimport,
 # which is appropriate when building the dll but not consuming it.
 target_compile_definitions(rr_common_plugins PRIVATE "RR_COMMON_PLUGINS_BUILDING_LIBRARY")
 
 install(
-  DIRECTORY include/
+  DIRECTORY include/ ${CMAKE_CURRENT_SOURCE_DIR}/include
   DESTINATION include/${PROJECT_NAME}
 )
 install(
@@ -93,6 +94,7 @@ endif()
 
 ament_export_include_directories(
   "include/${PROJECT_NAME}"
+  "include/${PROJECT_NAME}/generated"
 )
 ament_export_libraries(
   rr_common_plugins

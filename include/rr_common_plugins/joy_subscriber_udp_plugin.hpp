@@ -21,50 +21,51 @@
 #ifndef JOY_SUBSCRIBER_UDP_PLUGIN_HPP
 #define JOY_SUBSCRIBER_UDP_PLUGIN_HPP
 
-#include "lifecycle_msgs/msg/state.hpp"
-#include "rclcpp/rclcpp.hpp"
+#include <memory>
 #include "rr_common_base/rr_node_joy_plugin_iface.hpp"
-#include "sensor_msgs/msg/joy.hpp"
+#include "udp_msgs/msg/udp_packet.hpp"
 
-namespace rrobots
+using namespace std::placeholders;
+
+namespace rr_common_plugins
 {
-    namespace rr_joy_plugin
+    namespace rr_udp_plugins
     {
         /**
          * @class RrJoySubscriberUdpPlugin
          * @brief Creates subscription with UDP transport drivers, as a plugin.
-         * 
+         *
          * Designed to deserialize joystick messages sent via UDP by transport drivers udp_sender_node.
          * Nodes are expected to use the plugin library to initialize this plugin, and use interfaces::RrNodeJoyPluginIface
          * as the communication interface, thus reducing coupling.
          */
-        class RrJoySubscriberUdpPlugin : public interfaces::RrNodeJoyPluginIface
+        class RrJoySubscriberUdpPlugin : public rrobots::interfaces::RrNodeJoyPluginIface
         {
-          public:
-            using CallbackTypeP = std::function<void(const sensor_msgs::msg::Joy &)>;
+        public:
+            using CallbackT = std::function<void(const sensor_msgs::msg::Joy &)>;
 
             RrJoySubscriberUdpPlugin() = default;
-
             ~RrJoySubscriberUdpPlugin() = default;
 
             /**
              * @fn configure
              * @brief creates callback within plugin.
-             * 
+             *
              * Called during the configure phase of the lifecycle node.
-             * 
+             *
              * @param state nodes previous state when this method is called
              * @param callback to execute on subscription, this must std::function<void(const sensor_msgs::msg::Joy &)>
+             * @param node abstract interface of node implementing plugin.
              * @return CallbackReturn returns status result of method.
              */
-            [[nodiscard]] LNI::CallbackReturn configure(const lc::State &state, CallbackTypeP cb) override;
+            [[nodiscard]] LNI::CallbackReturn configure(const lc::State &state, CallbackT cb, rclcpp::Node::SharedPtr node) override;
 
             /**
              * @fn on_activate
              * @brief activates the plugin
-             * 
+             *
              * creates subscription and starts listening to ingress UDP packets
-             * 
+             *
              * @param state nodes previous state when this method is called
              * @return CallbackReturn returns status result of method.
              */
@@ -73,10 +74,10 @@ namespace rrobots
             /**
              * @fn on_deactivate
              * @brief stops the subscriber.
-             * 
+             *
              * stops the subscriber, this can occur before shutdown, or when lifecycle node is adjusting
              * frame frequency.
-             * 
+             *
              * @param state nodes previous state when this method is called
              * @return CallbackReturn returns status result of method.
              */
@@ -85,18 +86,23 @@ namespace rrobots
             /**
              * @fn on_cleanup
              * @brief resets local variables
-             * 
+             *
              * cleans up memory, this is done before shutdown is performed.
-             * 
+             *
              * @param state nodes previous state when this method is called
              * @return CallbackReturn returns status result of method.
              */
             [[nodiscard]] LNI::CallbackReturn on_cleanup(const lc::State &state) override;
 
-          private:
-            rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr subscription_ = nullptr;
+        private:
+            rclcpp::Subscription<udp_msgs::msg::UdpPacket>::SharedPtr subscription_ = nullptr;
+            rclcpp::Node::SharedPtr node_ = nullptr;
+            CallbackT cb_ = nullptr;
+            std::function<void(const udp_msgs::msg::UdpPacket::UniquePtr & packet)> plugin_cb_ = nullptr;
+            rclcpp::Logger logger_;
+            void subscriber_callback(const udp_msgs::msg::UdpPacket::UniquePtr & packet);
         };
-    } // namespace rr_joy_plugin
-} // namespace rrobots
+    }
+}
 
-#endif // JOY_SUBSCRIBER_PLUGIN_HPP
+#endif // JOY_SUBSCRIBER_UDP_PLUGIN_HPP

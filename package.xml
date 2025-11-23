@@ -2,25 +2,22 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>rr_common_plugins</name>
-  <version>0.0.1</version>
-  <description>common plugin for RR robot components</description>
-  <maintainer email="azzmosphere@gmail.com">aaron</maintainer>
+  <version>0.0.0</version>
+  <description>Common packages for ROS2</description>
+  <maintainer email="azzmosphere@gmail.com">Aaron Spiteri</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake_ros</buildtool_depend>
 
+  <depend>rclcpp</depend>
   <depend>pluginlib</depend>
   <depend>rr_common_base</depend>
-  <depend>rclcpp</depend>
   <depend>rr_interfaces</depend>
+  <depend>lifecycle_msgs</depend>
+  <depend>udp_msgs</depend>
 
-  <test_depend>ament_clang_format</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
-
-  <test_depend>ament_cmake_gtest</test_depend>
-  <test_depend>gmock</test_depend>
-  <test_depend>gtest</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

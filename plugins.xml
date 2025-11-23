@@ -1,6 +1,0 @@
-<library path="rr_common_plugins">
-    <class type="rr_common_plugins::RrSubscriberGpsImpl" base_class_type="rrobot::RrSubscriberGps">
-        <name>RrSubscriberGps</name>
-        <description>GPS subscriber Implementation</description>
-    </class>
-</library>

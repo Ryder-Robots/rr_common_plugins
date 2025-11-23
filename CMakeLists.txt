@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.20)
 project(rr_common_plugins)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -12,28 +12,25 @@ find_package(rclcpp REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rr_common_base REQUIRED)
 find_package(rr_interfaces REQUIRED)
+find_package(lifecycle_msgs REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+find_package(udp_msgs REQUIRED)
 
-add_library(rr_common_plugins 
-  src/rr_state_maintainer_impl.cpp
-  src/rr_subscriber_image_impl.cpp
-  src/rr_subscriber_gps_impl.cpp
-  src/rr_subscriber_joy_impl.cpp
-  src/rr_subscriber_batt_state_impl.cpp
-  src/rr_buffer_factory_simple.cpp)
-
-target_include_directories(rr_common_plugins
-  PUBLIC
-     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
-)
-
+add_library(rr_common_plugins src/joy_subscriber_udp_plugin.cpp)
+add_library(rr_common_plugins::rr_common_plugins ALIAS rr_common_plugins)
 target_compile_features(rr_common_plugins PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-
-ament_target_dependencies(
-  rr_common_plugins
-  rclcpp
-  rr_interfaces
-  "pluginlib"
-  "rr_common_base"
+target_include_directories(rr_common_plugins PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
+target_link_libraries(
+  rr_common_plugins PUBLIC
+  ${rclcpp_TARGETS}
+  ${pluginlib_TARGETS}
+  ${rr_common_base_TARGETS}
+  ${rr_interfaces_TARGETS}
+  ${lifecycle_msgs_TARGETS}
+  ${rclcpp_lifecycle_TARGETS}
+  ${udp_msgs_TARGETS}
 )
 
 # Causes the visibility macros to use dllexport rather than dllimport,
@@ -41,20 +38,16 @@ ament_target_dependencies(
 target_compile_definitions(rr_common_plugins PRIVATE "RR_COMMON_PLUGINS_BUILDING_LIBRARY")
 
 install(
+  DIRECTORY include/
+  DESTINATION include/${PROJECT_NAME}
+)
+install(
   TARGETS rr_common_plugins
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
-
-install(
-  DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
-  DESTINATION include  
-)
-
-get_target_property(INCLUDES rr_common_plugins INTERFACE_INCLUDE_DIRECTORIES)
-message(STATUS "Exposed include dirs for rr_common_plugins: ${INCLUDES}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -64,11 +57,8 @@ if(BUILD_TESTING)
   # the following line skips cpplint (only works in a git repo)
   # comment the line when this package is in a git repo and when
   # a copyright and license is added to all source files
-  # set(ament_cmake_cpplint_FOUND TRUE)
-  # ament_lint_auto_find_test_dependencies()
-
-  # Add local unit tests
-  # add_subdirectory(test)
+  set(ament_cmake_cpplint_FOUND TRUE)
+  ament_lint_auto_find_test_dependencies()
 endif()
 
 ament_export_include_directories(
@@ -80,5 +70,5 @@ ament_export_libraries(
 ament_export_targets(
   export_${PROJECT_NAME}
 )
-pluginlib_export_plugin_description_file(rr_common_base plugins.xml)
+
 ament_package()

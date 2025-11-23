@@ -21,6 +21,7 @@
 #ifndef JOY_SUBSCRIBER_UDP_PLUGIN_HPP
 #define JOY_SUBSCRIBER_UDP_PLUGIN_HPP
 
+#include "rr_common_plugins/visibility_control.h"
 #include "rr_common_base/rr_constants.hpp"
 #include "rr_common_base/rr_node_joy_plugin_iface.hpp"
 #include "rr_common_plugins/generated/rr_client.pb.h"
@@ -105,13 +106,24 @@ namespace rr_common_plugins
              */
             [[nodiscard]] LNI::CallbackReturn on_cleanup(const lc::State &state) override;
 
-          private:
+            /**
+             * @fn subscriber_callback
+             * @brief internal calback used for deserialization.
+             * @param packet inbound packet
+             */
+            void subscriber_callback(const udp_msgs::msg::UdpPacket::UniquePtr &packet);
+
+            /**
+             * @fn deserialize
+             * @brief deserializes inbound packewt and returns stadard Joy message
+             */
             sensor_msgs::msg::Joy deserialize(InboundMessage &packet);
+
+          private:
             rclcpp::Subscription<udp_msgs::msg::UdpPacket>::SharedPtr subscription_ = nullptr;
             rclcpp::Node::SharedPtr node_ = nullptr;
             CallbackT cb_ = nullptr;
             std::function<void(const udp_msgs::msg::UdpPacket::UniquePtr &packet)> plugin_cb_ = nullptr;
-            void subscriber_callback(const udp_msgs::msg::UdpPacket::UniquePtr &packet);
         };
     } // namespace rr_udp_plugins
 } // namespace rr_common_plugins

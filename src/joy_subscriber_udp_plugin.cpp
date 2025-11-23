@@ -66,20 +66,21 @@ namespace rr_common_plugins::rr_udp_plugins
      */
     sensor_msgs::msg::Joy RrJoySubscriberUdpPlugin::deserialize(InboundMessage &packet)
     {
+        rclcpp::Clock clock(RCL_ROS_TIME);
         Joystick *joystick_data = packet.mutable_joystick();
         sensor_msgs::msg::Joy joy;
 
-        joy.header.stamp = node_->now();
+        joy.header.stamp = clock.now();
         joy.header.frame_id = rr_constants::LINK_JOY_PS4;
 
         joy.axes.reserve(joystick_data->axes_size());
-        joy.axes.resize(joystick_data->axes_size());
+        joy.axes.resize(0);
         for (float a : joystick_data->axes()) {
             joy.axes.push_back(a);
         }
 
         joy.buttons.reserve(joy.buttons.size());
-        joy.buttons.resize(joy.buttons.size());
+        joy.buttons.resize(0);
         for (int b : joystick_data->buttons()) {
             joy.buttons.push_back(b);
         }

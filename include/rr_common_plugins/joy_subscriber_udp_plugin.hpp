@@ -71,7 +71,11 @@ namespace rr_common_plugins
              * @fn on_activate
              * @brief activates the plugin
              *
-             * creates subscription and starts listening to ingress UDP packets
+             * creates subscription and starts listening to ingress UDP packets.
+             * 
+             * CAVEAT: that deserialization of the inbound packet does not make any assumptions on what
+             * values are valid for axes, or buttons,  it is expected that data integrity is performed
+             * by the node itself.
              *
              * @param state nodes previous state when this method is called
              * @return CallbackReturn returns status result of method.

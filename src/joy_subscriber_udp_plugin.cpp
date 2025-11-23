@@ -68,6 +68,10 @@ namespace rr_common_plugins::rr_udp_plugins
     {
         Joystick *joystick_data = packet.mutable_joystick();
         sensor_msgs::msg::Joy joy;
+
+        joy.header.stamp = node_->now();
+        joy.header.frame_id = rr_constants::LINK_JOY_PS4;
+
         joy.axes.reserve(joystick_data->axes_size());
         joy.axes.resize(joystick_data->axes_size());
         for (float a : joystick_data->axes()) {
@@ -79,9 +83,6 @@ namespace rr_common_plugins::rr_udp_plugins
         for (int b : joystick_data->buttons()) {
             joy.buttons.push_back(b);
         }
-
-        joy.header.stamp = node_->now();
-        joy.header.frame_id = rr_constants::LINK_JOY_PS4;
         return joy;
     }
 
@@ -119,7 +120,7 @@ namespace rr_common_plugins::rr_udp_plugins
     {
         (void)state;
         RCLCPP_DEBUG(node_->get_logger(), "deactivating RrJoySubscriberUdpPlugin");
-                if (subscription_ != nullptr) {
+        if (subscription_ != nullptr) {
             subscription_.reset();
         }
         return LNI::CallbackReturn::SUCCESS;

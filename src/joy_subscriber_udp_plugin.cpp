@@ -111,6 +111,16 @@ namespace rr_common_plugins::rr_udp_plugins
         }
         return LNI::CallbackReturn::SUCCESS;
     }
+
+    LNI::CallbackReturn RrJoySubscriberUdpPlugin::on_deactivate(const lc::State &state)
+    {
+        (void)state;
+        RCLCPP_DEBUG(node_->get_logger(), "deactivating RrJoySubscriberUdpPlugin");
+                if (subscription_ != nullptr) {
+            subscription_.reset();
+        }
+        return LNI::CallbackReturn::SUCCESS;
+    }
 } // namespace rr_common_plugins::rr_udp_plugins
 
 PLUGINLIB_EXPORT_CLASS(rr_common_plugins::rr_udp_plugins::RrJoySubscriberUdpPlugin, rrobots::interfaces::RrNodeJoyPluginIface)

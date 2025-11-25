@@ -27,7 +27,7 @@ namespace rr_common_plugins::rr_udp_plugins
     /**
      * Configure node, let lifecycle node determine if it should be inilized.
      */
-    LNI::CallbackReturn RrJoySubscriberUdpPlugin::configure(const lc::State &state, CallbackT cb, rclcpp::Node::SharedPtr node)
+    LNI::CallbackReturn RrJoySubscriberUdpPlugin::configure(const lc::State &state, CallbackT cb, std::shared_ptr<rclcpp_lifecycle::LifecycleNode> node)
     {
         RCLCPP_DEBUG(node_->get_logger(), "configuring RrJoySubscriberUdpPlugin");
         (void)state;

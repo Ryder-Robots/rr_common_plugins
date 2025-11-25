@@ -66,7 +66,7 @@ namespace rr_common_plugins
              * @param node abstract interface of node implementing plugin.
              * @return CallbackReturn returns status result of method.
              */
-            [[nodiscard]] LNI::CallbackReturn configure(const lc::State &state, CallbackT cb, rclcpp::Node::SharedPtr node) override;
+            [[nodiscard]] LNI::CallbackReturn configure(const lc::State &state, CallbackT cb, std::shared_ptr<rclcpp_lifecycle::LifecycleNode> node) override;
 
             /**
              * @fn on_activate
@@ -121,7 +121,7 @@ namespace rr_common_plugins
 
           private:
             rclcpp::Subscription<udp_msgs::msg::UdpPacket>::SharedPtr subscription_ = nullptr;
-            rclcpp::Node::SharedPtr node_ = nullptr;
+            std::shared_ptr<rclcpp_lifecycle::LifecycleNode> node_ = nullptr;
             CallbackT cb_ = nullptr;
             std::function<void(const udp_msgs::msg::UdpPacket::UniquePtr &packet)> plugin_cb_ = nullptr;
         };

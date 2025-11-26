@@ -112,5 +112,5 @@ ament_export_targets(
   export_${PROJECT_NAME}
 )
 
-pluginlib_export_plugin_description_file(rr_interfaces plugins.xml)
+pluginlib_export_plugin_description_file(rr_common_base plugins.xml)
 ament_package()

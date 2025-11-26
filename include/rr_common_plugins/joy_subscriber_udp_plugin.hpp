@@ -66,7 +66,7 @@ namespace rr_common_plugins
              * @param node abstract interface of node implementing plugin.
              * @return CallbackReturn returns status result of method.
              */
-            [[nodiscard]] LNI::CallbackReturn configure(const lc::State &state, CallbackT cb, std::shared_ptr<rclcpp_lifecycle::LifecycleNode> node) override;
+            [[nodiscard]] LNI::CallbackReturn configure(const lc::State &state, CallbackT cb, rclcpp_lifecycle::LifecycleNode::SharedPtr node) override;
 
             /**
              * @fn on_activate
@@ -120,8 +120,9 @@ namespace rr_common_plugins
             sensor_msgs::msg::Joy deserialize(InboundMessage &packet);
 
           private:
+            rclcpp::Logger logger_ = rclcpp::get_logger("joy_subscriber_udp_plugin");
             rclcpp::Subscription<udp_msgs::msg::UdpPacket>::SharedPtr subscription_ = nullptr;
-            std::shared_ptr<rclcpp_lifecycle::LifecycleNode> node_ = nullptr;
+            rclcpp_lifecycle::LifecycleNode::SharedPtr node_ = nullptr;
             CallbackT cb_ = nullptr;
             std::function<void(const udp_msgs::msg::UdpPacket::UniquePtr &packet)> plugin_cb_ = nullptr;
         };

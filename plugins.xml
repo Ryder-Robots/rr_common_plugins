@@ -1,4 +1,4 @@
-<library path="RrJoySubscriberUdpPlugin">
+<library path="rr_common_plugins">
   <class type="rr_common_plugins::rr_udp_plugins::RrJoySubscriberUdpPlugin" base_class_type="rrobots::interfaces::RrNodeJoyPluginIface">
     <description>UDP deserializer for Joysticks</description>
     <name>rr_joy_udp_plugin</name>

@@ -29,10 +29,10 @@ namespace rr_common_plugins::rr_udp_plugins
      */
     LNI::CallbackReturn RrJoySubscriberUdpPlugin::configure(const lc::State &state, CallbackT cb, std::shared_ptr<rclcpp_lifecycle::LifecycleNode> node)
     {
-        RCLCPP_DEBUG(node_->get_logger(), "configuring RrJoySubscriberUdpPlugin");
+        RCLCPP_DEBUG(logger_, "configuring RrJoySubscriberUdpPlugin");
         (void)state;
-        if (node_ == nullptr || cb_ == nullptr) {
-            RCLCPP_ERROR(node_->get_logger(), "node is not defined, cannot activate");
+        if (node == nullptr || cb == nullptr) {
+            RCLCPP_ERROR(logger_, "node is not defined, cannot configure");
             return LNI::CallbackReturn::FAILURE;
         }
         cb_ = cb;

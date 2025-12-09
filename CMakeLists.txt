@@ -27,8 +27,8 @@ find_package(Protobuf REQUIRED)
 
 FetchContent_Declare(
   rr_proto
-  URL https://github.com/Ryder-Robots/rr_proto/archive/refs/tags/0.0.1-DEVEL.tar.gz
-  GIT_TAG 0.0.1-DEVEL
+  URL https://github.com/Ryder-Robots/rr_proto/archive/refs/tags/0.0.7-DEVEL.tar.gz
+  GIT_TAG 0.0.7-DEVEL
   SOURCE_SUBDIR proto
 )
 FetchContent_MakeAvailable(rr_proto)

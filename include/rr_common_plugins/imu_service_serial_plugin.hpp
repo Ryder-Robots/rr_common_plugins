@@ -1,0 +1,115 @@
+// Copyright (c) 2025 Ryder Robots
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+#pragma once
+
+#include "rr_common_base/rr_imu_service_plugin_iface.hpp"
+#include "rr_common_plugins/visibility_control.h"
+#include "rr_interfaces/action/monitor_imu_action.hpp"
+#include <memory>
+#include <pluginlib/class_list_macros.hpp>
+
+namespace rr_common_plugins
+{
+    namespace rr_serial_plugins
+    {
+        /**
+         * @class ImuServiceSerialPlugin
+         * @brief adds all functionality of serial interface to IMU using arduino BLE.
+         * 
+         * Low level communication to Arduino BLE-33 Sense is specific to USB, using transport_drivers ComposableNodeContainer
+         * this will be different for other hardware specfic implementations such as PX4 for auto-pilot. To compensate for this
+         * plugins are used to hide plumbing. The action node will not change in implementation, but the plugin it uses will.
+         * 
+         * The remainder of documentation will focus specifically on hardware implementation. 
+         */
+        class ImuServiceSerialPlugin : public rrobots::interfaces::RRImuServicePluginIface
+        {
+            using ActionType = rr_interfaces::action::MonitorImuAction;
+            using GoalHandle = rclcpp_action::ServerGoalHandle<ActionType>;
+
+            /**
+             * @fn on_srv_configure
+             * @brief called by action concrete implementation during configure phase of its lifecycle.
+             * 
+             * Creates subscriptions to topics "/serial_read" and "/serial_write", if topics are not available, then 
+             * action will be considered "failed". This will return CallbackReturn::TRANSITION_CALLBACK_FAILURE.
+             * 
+             * If erroneous configuration occurs, that will stop the action from operating, regardless of if topics 
+             * become available at a later stage, then  CallbackReturn::TRANSITION_CALLBACK_ERROR will be returned.
+             * 
+             * @param state previous or current state of concrete node, or the state of previous lifecycle method.
+             * @param node concrete node shared pointer, used to create topic subscriptions
+             * @return CallbackReturn, this is described in detail in function description.
+             */
+            rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_srv_configure(
+                const rclcpp_lifecycle::State &state,
+                rclcpp_lifecycle::LifecycleNode::SharedPtr node
+            ) override;
+
+            /**
+             * @fn handle_goal
+             * @brief returns availability of the requested goal.
+             * 
+             * provided configuration errors, or USB errors are not detected then this will return GoalResponse::ACCEPT_AND_EXECUTE 
+             * which should be interpreted that the action will attempt to send protobuf IMU monitor at the time that this request was recieved.
+             * 
+             * if USB is unavailable then GoalResponse::ACCEPT_AND_DEFER MAY be returned indicating that the action is waiting for communications
+             * with Arduino to become available at some later stage.
+             * 
+             * Under any configuration errors, or topics are not currently available then GoalResponse::REJECT will be returned, this status should be 
+             * avoided, as it can be detected during configure stage of lifecycle when execution of 'on_srv_configure', this condition MAY also be triggered
+             * if on_srv_configure() was not called during configuration phase.
+             * 
+             * @param uuid unique identified provided by ROS2 middleware, note that this retained as part of the return message and should be 
+             * used in bagging services, along with stamp to trace results.
+             * @param goal raw goal, will be assessed in this method to ensure that it has all required information for action, if it does then ACCEPT_AND_EXECUTE
+             * or ACCEPT_AND_DEFER will be returned under the conditions described in detail in the function description.
+             * @return GoalResponse, this is described in detail in function description.
+             */
+            rclcpp_action::GoalResponse handle_goal(
+                const rclcpp_action::GoalUUID &uuid,
+                std::shared_ptr<const ActionType::Goal> goal) override;
+
+            /**
+             * @fn handle_cancel
+             * @brief cancellation may occur when lifecycle node decides that timeout period has been reached, after node returns
+             * ACCEPT_AND_DEFER, and USB has not come alive. In this case current action will be cancelled, and all consequent 
+             * actions requests will return REJECT.
+             * @brief goal_handle, pointer to goal information.
+             * @return Always return ACCEPT
+             */
+            rclcpp_action::CancelResponse handle_cancel(const std::shared_ptr<GoalHandle> goal_handle) override;
+
+            /**
+             * @fn handle_accepted
+             * @brief when handle_goal returns ACCEPT_AND_EXECUTE, then this method will be executed in its own thread.
+             * 
+             * Submits IMU monitor request to /serial_write, feedback will then be immediately set to 'send', it will remain in this 
+             * state until Arduino returns serial response on /serial_read that corresponds IMU response. After this, status will be set
+             * to 'processing' and method will map protobuf response to ROS2 message format for IMU,  note that calculations for quadratics
+             * will be performed on the micro-processor itself, and not as part of this routine.
+             * 
+             * After mapping a final result will be set, and action should be considered complete.
+             */
+            void handle_accepted(const std::shared_ptr<GoalHandle> goal_handle) override;
+        };
+    } // namespace rr_serial_plugins
+} // namespace rr_common_plugins

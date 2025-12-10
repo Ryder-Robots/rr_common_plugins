@@ -20,13 +20,17 @@
 
 #pragma once
 
-// #include "lifecycle_msgs/msg/state.hpp"
-// #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "rr_common_base/rr_imu_service_plugin_iface.hpp"
+#include "rr_common_base/rr_constants.hpp"
 #include "rr_common_plugins/visibility_control.h"
 #include "rr_interfaces/action/monitor_imu_action.hpp"
+#include <filesystem>
 #include <memory>
 #include <pluginlib/class_list_macros.hpp>
+#include <std_msgs/msg/u_int8_multi_array.hpp>
+#include <sys/stat.h>
+#include "rr_common_plugins/generated/rr_serial.pb.h"
+#include <mutex>
 
 
 namespace rr_common_plugins
@@ -47,11 +51,33 @@ namespace rr_common_plugins
         {
             using ActionType = rr_interfaces::action::MonitorImuAction;
             using GoalHandle = rclcpp_action::ServerGoalHandle<ActionType>;
+            using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
+            using UInt8MultiArray = std_msgs::msg::UInt8MultiArray;
+            using State = rclcpp_lifecycle::State;
 
           private:
             // current transaction UUID
             rclcpp_action::GoalUUID uuid_;
             rclcpp_action::GoalResponse goal_response_;
+            std::shared_ptr<const typename ActionType::Goal> goal_;
+            std::shared_ptr<GoalHandle> goal_handle_ = nullptr;
+
+            rclcpp::Subscription<UInt8MultiArray>::SharedPtr subscription_ = nullptr;
+            rclcpp_lifecycle::LifecyclePublisher<UInt8MultiArray>::SharedPtr publisher_ = nullptr;
+
+            // internal methods, note these are the methods that will do the work.
+            void subscriber_cb(const UInt8MultiArray::UniquePtr &packet);
+            void execute(const std::shared_ptr<GoalHandle> goal_handle);
+
+            // internal method, checks for USB device that transport driver is using, and that the file exists.
+            uint8_t transport_available(rclcpp_lifecycle::LifecycleNode::SharedPtr node);
+            bool is_character_device(const std::string &path);
+
+            const std::string WRITE_TOPIC_ = "/serial_write";
+            const std::string READ_TOPIC_ = "/serial_read";
+
+            // standard mutex to help with threading.
+            std::mutex g_i_mutex_; 
 
           public:
             ImuServiceSerialPlugin() = default;
@@ -71,8 +97,7 @@ namespace rr_common_plugins
              * @param node concrete node shared pointer, used to create topic subscriptions
              * @return CallbackReturn, this is described in detail in function description.
              */
-            [[nodiscard]] rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_srv_configure(
-                const rclcpp_lifecycle::State &state,
+            [[nodiscard]] CallbackReturn on_srv_configure(const rclcpp_lifecycle::State &state,
                 rclcpp_lifecycle::LifecycleNode::SharedPtr node) override;
 
             /**
@@ -122,6 +147,19 @@ namespace rr_common_plugins
              */
             void handle_accepted(
                 const std::shared_ptr<GoalHandle> goal_handle) override;
+
+
+            /**
+             * @fn on_activate
+             * @brief performs lifecycle activation procedure.
+             */
+            [[nodiscard]] CallbackReturn on_activate(const State &state) override;
+
+            /**
+             * @fn on_deactivate
+             * @brief performs lifecycle deactivation routines
+             */
+            [[nodiscard]] CallbackReturn on_deactivate(const State &state) override;
         };
     } // namespace rr_serial_plugins
 } // namespace rr_common_plugins

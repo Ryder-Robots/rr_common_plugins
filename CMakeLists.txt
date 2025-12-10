@@ -37,7 +37,7 @@ FetchContent_MakeAvailable(rr_proto)
 
 set(PROTOC_OUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/rr_common_plugins/generated")
 file(MAKE_DIRECTORY "${PROTOC_OUT_DIR}")
-set(PROTO_FILES ${rr_proto_SOURCE_DIR}/proto/rr_client.proto)
+set(PROTO_FILES ${rr_proto_SOURCE_DIR}/proto/rr_client.proto ${rr_proto_SOURCE_DIR}/proto/rr_serial.proto)
 
 message(STATUS "PROTPROTOC_OUT_DIR_FILES: ${PROTOC_OUT_DIR}")
 message(STATUS "PROTO_FILES: ${PROTO_FILES}")

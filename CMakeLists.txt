@@ -24,6 +24,8 @@ find_package(lifecycle_msgs REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(udp_msgs REQUIRED)
 find_package(Protobuf REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(rclcpp_components REQUIRED)
 
 FetchContent_Declare(
   rr_proto
@@ -47,6 +49,7 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
 
 add_library(rr_common_plugins 
   src/joy_subscriber_udp_plugin.cpp
+  src/imu_service_serial_plugin.cpp
   ${PROTO_SRCS} 
   ${PROTO_HDRS})
 
@@ -67,6 +70,8 @@ target_link_libraries(
   ${lifecycle_msgs_TARGETS}
   ${rclcpp_lifecycle_TARGETS}
   ${udp_msgs_TARGETS}
+  ${rclcpp_action_TARGETS}
+  ${rclcpp_components_TARGETS}
   protobuf::libprotobuf
 )
 

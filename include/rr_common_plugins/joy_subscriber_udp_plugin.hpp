@@ -21,15 +21,16 @@
 #ifndef JOY_SUBSCRIBER_UDP_PLUGIN_HPP
 #define JOY_SUBSCRIBER_UDP_PLUGIN_HPP
 
-#include "rr_common_plugins/visibility_control.h"
 #include "rr_common_base/rr_constants.hpp"
 #include "rr_common_base/rr_node_joy_plugin_iface.hpp"
 #include "rr_common_plugins/generated/rr_client.pb.h"
+#include "rr_common_plugins/visibility_control.h"
 #include "sensor_msgs/msg/joy.hpp"
 #include "udp_msgs/msg/udp_packet.hpp"
 #include <memory>
 #include <pluginlib/class_list_macros.hpp>
 
+using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
 namespace rr_common_plugins
 {
@@ -47,6 +48,7 @@ namespace rr_common_plugins
         {
           public:
             using CallbackT = std::function<void(const sensor_msgs::msg::Joy &)>;
+            using State = rclcpp_lifecycle::State;
 
             explicit RrJoySubscriberUdpPlugin() = default;
             ~RrJoySubscriberUdpPlugin() = default;
@@ -66,7 +68,7 @@ namespace rr_common_plugins
              * @param node abstract interface of node implementing plugin.
              * @return CallbackReturn returns status result of method.
              */
-            [[nodiscard]] LNI::CallbackReturn configure(const lc::State &state, CallbackT cb, rclcpp_lifecycle::LifecycleNode::SharedPtr node) override;
+            [[nodiscard]] CallbackReturn configure(const State &state, CallbackT cb, rclcpp_lifecycle::LifecycleNode::SharedPtr node) override;
 
             /**
              * @fn on_activate
@@ -81,7 +83,7 @@ namespace rr_common_plugins
              * @param state nodes previous state when this method is called
              * @return CallbackReturn returns status result of method.
              */
-            [[nodiscard]] LNI::CallbackReturn on_activate(const lc::State &state) override;
+            [[nodiscard]] CallbackReturn on_activate(const State &state) override;
 
             /**
              * @fn on_deactivate
@@ -93,7 +95,7 @@ namespace rr_common_plugins
              * @param state nodes previous state when this method is called
              * @return CallbackReturn returns status result of method.
              */
-            [[nodiscard]] LNI::CallbackReturn on_deactivate(const lc::State &state) override;
+            [[nodiscard]] CallbackReturn on_deactivate(const State &state) override;
 
             /**
              * @fn on_cleanup
@@ -104,7 +106,7 @@ namespace rr_common_plugins
              * @param state nodes previous state when this method is called
              * @return CallbackReturn returns status result of method.
              */
-            [[nodiscard]] LNI::CallbackReturn on_cleanup(const lc::State &state) override;
+            [[nodiscard]] CallbackReturn on_cleanup(const State &state) override;
 
             /**
              * @fn subscriber_callback

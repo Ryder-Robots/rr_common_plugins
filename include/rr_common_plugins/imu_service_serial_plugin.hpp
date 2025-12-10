@@ -20,11 +20,14 @@
 
 #pragma once
 
+// #include "lifecycle_msgs/msg/state.hpp"
+// #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "rr_common_base/rr_imu_service_plugin_iface.hpp"
 #include "rr_common_plugins/visibility_control.h"
 #include "rr_interfaces/action/monitor_imu_action.hpp"
 #include <memory>
 #include <pluginlib/class_list_macros.hpp>
+
 
 namespace rr_common_plugins
 {
@@ -35,7 +38,7 @@ namespace rr_common_plugins
          * @brief adds all functionality of serial interface to IMU using arduino BLE.
          * 
          * Low level communication to Arduino BLE-33 Sense is specific to USB, using transport_drivers ComposableNodeContainer
-         * this will be different for other hardware specfic implementations such as PX4 for auto-pilot. To compensate for this
+         * this will be different for other hardware specific implementations such as PX4 for auto-pilot. To compensate for this
          * plugins are used to hide plumbing. The action node will not change in implementation, but the plugin it uses will.
          * 
          * The remainder of documentation will focus specifically on hardware implementation. 
@@ -44,6 +47,15 @@ namespace rr_common_plugins
         {
             using ActionType = rr_interfaces::action::MonitorImuAction;
             using GoalHandle = rclcpp_action::ServerGoalHandle<ActionType>;
+
+          private:
+            // current transaction UUID
+            rclcpp_action::GoalUUID uuid_;
+            rclcpp_action::GoalResponse goal_response_;
+
+          public:
+            ImuServiceSerialPlugin() = default;
+            ~ImuServiceSerialPlugin() = default;
 
             /**
              * @fn on_srv_configure
@@ -59,10 +71,9 @@ namespace rr_common_plugins
              * @param node concrete node shared pointer, used to create topic subscriptions
              * @return CallbackReturn, this is described in detail in function description.
              */
-            rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_srv_configure(
+            [[nodiscard]] rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn on_srv_configure(
                 const rclcpp_lifecycle::State &state,
-                rclcpp_lifecycle::LifecycleNode::SharedPtr node
-            ) override;
+                rclcpp_lifecycle::LifecycleNode::SharedPtr node) override;
 
             /**
              * @fn handle_goal
@@ -84,9 +95,9 @@ namespace rr_common_plugins
              * or ACCEPT_AND_DEFER will be returned under the conditions described in detail in the function description.
              * @return GoalResponse, this is described in detail in function description.
              */
-            rclcpp_action::GoalResponse handle_goal(
+            [[nodiscard]] rclcpp_action::GoalResponse handle_goal(
                 const rclcpp_action::GoalUUID &uuid,
-                std::shared_ptr<const ActionType::Goal> goal) override;
+                std::shared_ptr<const typename ActionType::Goal> goal) override;
 
             /**
              * @fn handle_cancel
@@ -96,8 +107,8 @@ namespace rr_common_plugins
              * @brief goal_handle, pointer to goal information.
              * @return Always return ACCEPT
              */
-            rclcpp_action::CancelResponse handle_cancel(const std::shared_ptr<GoalHandle> goal_handle) override;
-
+            [[nodiscard]] rclcpp_action::CancelResponse handle_cancel(
+                const std::shared_ptr<GoalHandle> goal_handle) override;
             /**
              * @fn handle_accepted
              * @brief when handle_goal returns ACCEPT_AND_EXECUTE, then this method will be executed in its own thread.
@@ -109,7 +120,8 @@ namespace rr_common_plugins
              * 
              * After mapping a final result will be set, and action should be considered complete.
              */
-            void handle_accepted(const std::shared_ptr<GoalHandle> goal_handle) override;
+            void handle_accepted(
+                const std::shared_ptr<GoalHandle> goal_handle) override;
         };
     } // namespace rr_serial_plugins
 } // namespace rr_common_plugins

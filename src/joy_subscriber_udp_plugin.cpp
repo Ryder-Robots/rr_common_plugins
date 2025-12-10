@@ -27,37 +27,37 @@ namespace rr_common_plugins::rr_udp_plugins
     /**
      * Configure node, let lifecycle node determine if it should be inilized.
      */
-    LNI::CallbackReturn RrJoySubscriberUdpPlugin::configure(const lc::State &state, CallbackT cb, std::shared_ptr<rclcpp_lifecycle::LifecycleNode> node)
+    CallbackReturn RrJoySubscriberUdpPlugin::configure(const State &state, CallbackT cb, std::shared_ptr<rclcpp_lifecycle::LifecycleNode> node)
     {
         RCLCPP_DEBUG(logger_, "configuring RrJoySubscriberUdpPlugin");
         (void)state;
         if (node == nullptr || cb == nullptr) {
             RCLCPP_ERROR(logger_, "node is not defined, cannot configure");
-            return LNI::CallbackReturn::FAILURE;
+            return CallbackReturn::FAILURE;
         }
         cb_ = cb;
         node_ = node;
 
         // callback is created here, because in activate it can be re-used without redefining.
         plugin_cb_ = std::bind(&RrJoySubscriberUdpPlugin::subscriber_callback, this, _1);
-        return LNI::CallbackReturn::SUCCESS;
+        return CallbackReturn::SUCCESS;
     }
 
     /**
      * Create binding routine to callback that will be used.
      */
-    LNI::CallbackReturn RrJoySubscriberUdpPlugin::on_activate(const lc::State &state)
+    CallbackReturn RrJoySubscriberUdpPlugin::on_activate(const State &state)
     {
         RCLCPP_DEBUG(node_->get_logger(), "activating RrJoySubscriberUdpPlugin");
         (void)state;
         if (node_ == nullptr || cb_ == nullptr) {
             RCLCPP_ERROR(node_->get_logger(), "node is not defined, cannot activate");
-            return LNI::CallbackReturn::FAILURE;
+            return CallbackReturn::FAILURE;
         }
         rclcpp::SubscriptionOptions options;
         subscription_ = node_->create_subscription<udp_msgs::msg::UdpPacket>("/udp_read", rclcpp::SensorDataQoS(), plugin_cb_);
 
-        return LNI::CallbackReturn::SUCCESS;
+        return CallbackReturn::SUCCESS;
     }
 
 
@@ -107,24 +107,24 @@ namespace rr_common_plugins::rr_udp_plugins
     /**
      * reset all variables, not that once this routine is called, it will need to re-configured
      */
-    LNI::CallbackReturn RrJoySubscriberUdpPlugin::on_cleanup(const lc::State &state)
+    CallbackReturn RrJoySubscriberUdpPlugin::on_cleanup(const State &state)
     {
         (void)state;
         RCLCPP_DEBUG(node_->get_logger(), "cleaning RrJoySubscriberUdpPlugin");
         if (subscription_ != nullptr) {
             subscription_.reset();
         }
-        return LNI::CallbackReturn::SUCCESS;
+        return CallbackReturn::SUCCESS;
     }
 
-    LNI::CallbackReturn RrJoySubscriberUdpPlugin::on_deactivate(const lc::State &state)
+    CallbackReturn RrJoySubscriberUdpPlugin::on_deactivate(const State &state)
     {
         (void)state;
         RCLCPP_DEBUG(node_->get_logger(), "deactivating RrJoySubscriberUdpPlugin");
         if (subscription_ != nullptr) {
             subscription_.reset();
         }
-        return LNI::CallbackReturn::SUCCESS;
+        return CallbackReturn::SUCCESS;
     }
 } // namespace rr_common_plugins::rr_udp_plugins
 

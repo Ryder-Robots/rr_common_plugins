@@ -28,6 +28,9 @@ using GoalUUID = rclcpp_action::GoalUUID;
 using GoalResponse = rclcpp_action::GoalResponse;
 using CancelResponse = rclcpp_action::CancelResponse;
 using UInt8MultiArray = std_msgs::msg::UInt8MultiArray;
+using IMUFeedback = rr_interfaces::action::MonitorImuAction_Feedback;
+using RRActionStatusE = rr_constants::rr_action_status_t;
+using RROpCodeE = rr_constants::rr_op_code_t;
 
 using namespace std::placeholders;
 
@@ -42,28 +45,90 @@ namespace rr_common_plugins
         void ImuServiceSerialPlugin::subscriber_cb(const UInt8MultiArray::UniquePtr &packet)
         {
             const std::lock_guard<std::mutex> lock(g_i_mutex_);
+            if (goal_handle_ == nullptr) {
+                RCLCPP_FATAL(rclcpp::get_logger("ImuServiceSerialPlugin"),
+                    "goal handle was not created");
+                return;
+            }
+            auto result = std::make_shared<ActionType::Result>();
+            std::shared_ptr<IMUFeedback> feedback_msg = std::make_shared<IMUFeedback>();
+            feedback_msg->status = RRActionStatusE::ACTION_STATE_PROCESSING;
+            goal_handle_->publish_feedback(feedback_msg);
 
             // if not executing leave method.
-            if (goal_handle_ == nullptr || !goal_handle_->is_executing()) {
+            if(!goal_handle_->is_executing()) {
+                RCLCPP_ERROR(rclcpp::get_logger("ImuServiceSerialPlugin"),
+                    "Not able to process request at this time");
+                feedback_msg->status = RRActionStatusE::ACTION_STATE_FAIL;
+                goal_handle_->publish_feedback(feedback_msg);
+                result->success = false;
+                goal_handle_->abort(result);
                 return;
             }
 
             // begin deserializing packet.
+            org::ryderrobots::ros2::serial::Response res;
+            if (!res.ParseFromArray(packet->data.data(), packet->data.size())) {
+                RCLCPP_ERROR(rclcpp::get_logger("ImuServiceSerialPlugin"),
+                    "Failed to deserialize response packet");
+                feedback_msg->status = RRActionStatusE::ACTION_STATE_FAIL;
+                goal_handle_->publish_feedback(feedback_msg);
+                result->success = false;
+                goal_handle_->abort(result);
+                return;
+            }
+
+            if (res.op() != RROpCodeE::MSP_RAW_IMU) {
+                // not an error, just dont need to care about anything that is not IMU.
+                return;
+            }
+            const auto &imu_data = res.msp_raw_imu();
+            rclcpp::Clock clock(RCL_ROS_TIME);
+            sensor_msgs::msg::Imu imu;
+            imu.header.frame_id = rr_constants::LINK_IMU;
+            imu.header.stamp = clock.now();
+
+            if (imu_data.has_orientation()) {
+                imu.orientation.x = imu_data.orientation().x();
+                imu.orientation.y = imu_data.orientation().y();
+                imu.orientation.z = imu_data.orientation().z();
+                imu.orientation.w = imu_data.orientation().w();
+            }
+
+            if (imu_data.has_angular_velocity()) {
+                imu.angular_velocity.x = imu_data.angular_velocity().x();
+                imu.angular_velocity.y = imu_data.angular_velocity().y();
+                imu.angular_velocity.z = imu_data.angular_velocity().z();
+            }
+
+            if (imu_data.has_linear_acceleration()) {
+                imu.linear_acceleration.x = imu_data.linear_acceleration().x();
+                imu.linear_acceleration.y = imu_data.linear_acceleration().y();
+                imu.linear_acceleration.z = imu_data.linear_acceleration().z();
+            }
+
+            if (rclcpp::ok()) {
+                result->imu = imu;
+                goal_handle_->succeed(result);
+                feedback_msg->status = RRActionStatusE::ACTION_STATE_SUCCESS;
+                goal_handle_->publish_feedback(feedback_msg);
+            }
         }
 
         void ImuServiceSerialPlugin::execute(const std::shared_ptr<GoalHandle> goal_handle)
         {
+            auto result = std::make_shared<ActionType::Result>();
             const std::lock_guard<std::mutex> lock(g_i_mutex_);
-            
+
             // first set feedback.
-            std::shared_ptr<rr_interfaces::action::MonitorImuAction_Feedback> feedback_msg = std::make_shared<rr_interfaces::action::MonitorImuAction_Feedback>();
-            feedback_msg->status = rr_constants::ACTION_STATE_PREPARING;
+            std::shared_ptr<IMUFeedback> feedback_msg = std::make_shared<IMUFeedback>();
+            feedback_msg->status = RRActionStatusE::ACTION_STATE_PREPARING;
             goal_handle->publish_feedback(feedback_msg);
 
             org::ryderrobots::ros2::serial::Request req;
             org::ryderrobots::ros2::serial::Monitor *monitor = req.mutable_monitor();
             monitor->set_is_request(true);
-            req.set_op(rr_constants::rr_op_code_t::MSP_RAW_IMU);
+            req.set_op(RROpCodeE::MSP_RAW_IMU);
 
             std::string serialized_data;
 
@@ -71,7 +136,10 @@ namespace rr_common_plugins
                 RCLCPP_ERROR(rclcpp::get_logger("ImuServiceSerialPlugin"),
                     "Failed to serialize request");
 
-                // TODO: need to trigger some sort of error state
+                feedback_msg->status = RRActionStatusE::ACTION_STATE_FAIL;
+                goal_handle->publish_feedback(feedback_msg);
+                result->success = false;
+                goal_handle_->abort(result);
                 return;
             }
 
@@ -82,7 +150,7 @@ namespace rr_common_plugins
 
             // Publish
             publisher_->publish(msg);
-            feedback_msg->status = rr_constants::ACTION_STATE_SENT;
+            feedback_msg->status = RRActionStatusE::ACTION_STATE_SENT;
             goal_handle->publish_feedback(feedback_msg);
         }
 
@@ -100,6 +168,7 @@ namespace rr_common_plugins
 
 
         /**
+         * TODO: When other plugins are added move checking to common base class.
          * Perform various checks to ensure transport node is available.
          */
         uint8_t ImuServiceSerialPlugin::transport_available(LifecycleNode::SharedPtr node)
@@ -147,6 +216,7 @@ namespace rr_common_plugins
             return 0;
         }
 
+        // TODO: move to on_configure, mkae it clearer.
         CallbackReturn ImuServiceSerialPlugin::on_srv_configure(const State &state, LifecycleNode::SharedPtr node)
         {
             (void)state;

@@ -28,6 +28,7 @@
 #include <memory>
 #include <pluginlib/class_list_macros.hpp>
 #include <std_msgs/msg/u_int8_multi_array.hpp>
+#include <sensor_msgs/msg/imu.hpp>
 #include <sys/stat.h>
 #include "rr_common_plugins/generated/rr_serial.pb.h"
 #include <mutex>

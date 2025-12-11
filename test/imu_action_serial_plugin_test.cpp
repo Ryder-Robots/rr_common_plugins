@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "rr_common_plugins/imu_service_serial_plugin.hpp"
+#include "rr_common_plugins/imu_action_serial_plugin.hpp"
 #include "rr_common_plugins/generated/rr_serial.pb.h"
 #include "rr_common_base/rr_constants.hpp"
 #include <gtest/gtest.h>
@@ -29,12 +29,12 @@
 using namespace rr_common_plugins::rr_serial_plugins;
 using RROpCodeE = rr_constants::rr_op_code_t;
 
-class TestImuServiceSerialPlugin : public testing::Test
+class TestImuActionSerialPlugin : public testing::Test
 {
   protected:
-    TestImuServiceSerialPlugin() {}
+    TestImuActionSerialPlugin() {}
 
-    ~TestImuServiceSerialPlugin() override
+    ~TestImuActionSerialPlugin() override
     {
         // You can do clean-up work that doesn't throw exceptions here.
     }
@@ -113,15 +113,15 @@ class TestImuServiceSerialPlugin : public testing::Test
     }
 };
 
-TEST_F(TestImuServiceSerialPlugin, plugin_instantiation)
+TEST_F(TestImuActionSerialPlugin, plugin_instantiation)
 {
-    std::shared_ptr<ImuServiceSerialPlugin> plugin =
-        std::make_shared<ImuServiceSerialPlugin>();
+    std::shared_ptr<ImuActionSerialPlugin> plugin =
+        std::make_shared<ImuActionSerialPlugin>();
 
     EXPECT_TRUE(plugin != nullptr);
 }
 
-TEST_F(TestImuServiceSerialPlugin, protobuf_serialization_orientation)
+TEST_F(TestImuActionSerialPlugin, protobuf_serialization_orientation)
 {
     // Test that we can create and serialize an IMU response with orientation
     auto serialized = createImuResponse(
@@ -145,7 +145,7 @@ TEST_F(TestImuServiceSerialPlugin, protobuf_serialization_orientation)
     EXPECT_DOUBLE_EQ(imu_data.orientation().w(), 1.0);
 }
 
-TEST_F(TestImuServiceSerialPlugin, protobuf_serialization_angular_velocity)
+TEST_F(TestImuActionSerialPlugin, protobuf_serialization_angular_velocity)
 {
     // Test angular velocity values
     auto serialized = createImuResponse(
@@ -164,7 +164,7 @@ TEST_F(TestImuServiceSerialPlugin, protobuf_serialization_angular_velocity)
     EXPECT_DOUBLE_EQ(imu_data.angular_velocity().z(), 0.8);
 }
 
-TEST_F(TestImuServiceSerialPlugin, protobuf_serialization_linear_acceleration)
+TEST_F(TestImuActionSerialPlugin, protobuf_serialization_linear_acceleration)
 {
     // Test linear acceleration values
     auto serialized = createImuResponse(
@@ -183,7 +183,7 @@ TEST_F(TestImuServiceSerialPlugin, protobuf_serialization_linear_acceleration)
     EXPECT_DOUBLE_EQ(imu_data.linear_acceleration().z(), 9.81);
 }
 
-TEST_F(TestImuServiceSerialPlugin, protobuf_covariance_matrices)
+TEST_F(TestImuActionSerialPlugin, protobuf_covariance_matrices)
 {
     // Test that covariance matrices are properly serialized
     auto serialized = createImuResponse(
@@ -216,7 +216,7 @@ TEST_F(TestImuServiceSerialPlugin, protobuf_covariance_matrices)
     }
 }
 
-TEST_F(TestImuServiceSerialPlugin, protobuf_wrong_opcode_deserialization)
+TEST_F(TestImuActionSerialPlugin, protobuf_wrong_opcode_deserialization)
 {
     // Test that we can deserialize a message with wrong opcode
     auto serialized = createWrongOpcodeResponse();
@@ -226,7 +226,7 @@ TEST_F(TestImuServiceSerialPlugin, protobuf_wrong_opcode_deserialization)
     EXPECT_NE(response.op(), RROpCodeE::MSP_RAW_IMU);
 }
 
-TEST_F(TestImuServiceSerialPlugin, protobuf_empty_data_deserialization)
+TEST_F(TestImuActionSerialPlugin, protobuf_empty_data_deserialization)
 {
     // Test deserialization of empty data (protobuf accepts empty as valid empty message)
     std::vector<uint8_t> empty_data;
@@ -238,7 +238,7 @@ TEST_F(TestImuServiceSerialPlugin, protobuf_empty_data_deserialization)
     EXPECT_FALSE(response.has_msp_raw_imu());
 }
 
-TEST_F(TestImuServiceSerialPlugin, protobuf_request_serialization)
+TEST_F(TestImuActionSerialPlugin, protobuf_request_serialization)
 {
     // Test that we can create and serialize an IMU request
     org::ryderrobots::ros2::serial::Request request;
@@ -259,7 +259,7 @@ TEST_F(TestImuServiceSerialPlugin, protobuf_request_serialization)
     EXPECT_TRUE(request_check.monitor().is_request());
 }
 
-TEST_F(TestImuServiceSerialPlugin, extreme_values_quaternion)
+TEST_F(TestImuActionSerialPlugin, extreme_values_quaternion)
 {
     // Test with extreme quaternion values
     auto serialized = createImuResponse(
@@ -276,7 +276,7 @@ TEST_F(TestImuServiceSerialPlugin, extreme_values_quaternion)
     EXPECT_DOUBLE_EQ(imu_data.orientation().w(), 0.0);
 }
 
-TEST_F(TestImuServiceSerialPlugin, negative_acceleration_values)
+TEST_F(TestImuActionSerialPlugin, negative_acceleration_values)
 {
     // Test with negative acceleration (e.g., free fall or inverted)
     auto serialized = createImuResponse(
@@ -292,7 +292,7 @@ TEST_F(TestImuServiceSerialPlugin, negative_acceleration_values)
     EXPECT_DOUBLE_EQ(imu_data.linear_acceleration().z(), -9.81);
 }
 
-TEST_F(TestImuServiceSerialPlugin, high_angular_velocity)
+TEST_F(TestImuActionSerialPlugin, high_angular_velocity)
 {
     // Test with high angular velocity values (rapid rotation)
     auto serialized = createImuResponse(

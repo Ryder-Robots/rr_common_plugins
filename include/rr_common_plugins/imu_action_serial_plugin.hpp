@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "rr_common_base/rr_imu_service_plugin_iface.hpp"
+#include "rr_common_base/rr_imu_action_plugin_iface.hpp"
 #include "rr_common_base/rr_constants.hpp"
 #include "rr_common_plugins/visibility_control.h"
 #include "rr_interfaces/action/monitor_imu_action.hpp"
@@ -39,16 +39,16 @@ namespace rr_common_plugins
     namespace rr_serial_plugins
     {
         /**
-         * @class ImuServiceSerialPlugin
+         * @class ImuActionSerialPlugin
          * @brief adds all functionality of serial interface to IMU using arduino BLE.
-         * 
+         *
          * Low level communication to Arduino BLE-33 Sense is specific to USB, using transport_drivers ComposableNodeContainer
          * this will be different for other hardware specific implementations such as PX4 for auto-pilot. To compensate for this
          * plugins are used to hide plumbing. The action node will not change in implementation, but the plugin it uses will.
-         * 
-         * The remainder of documentation will focus specifically on hardware implementation. 
+         *
+         * The remainder of documentation will focus specifically on hardware implementation.
          */
-        class ImuServiceSerialPlugin : public rrobots::interfaces::RRImuServicePluginIface
+        class ImuActionSerialPlugin : public rrobots::interfaces::RRImuActionPluginIface
         {
             using ActionType = rr_interfaces::action::MonitorImuAction;
             using GoalHandle = rclcpp_action::ServerGoalHandle<ActionType>;
@@ -82,11 +82,11 @@ namespace rr_common_plugins
             std::mutex g_i_mutex_;
           
           public:
-            ImuServiceSerialPlugin() = default;
-            ~ImuServiceSerialPlugin() = default;
+            ImuActionSerialPlugin() = default;
+            ~ImuActionSerialPlugin() = default;
 
             /**
-             * @fn on_srv_configure
+             * @fn on_configure
              * @brief called by action concrete implementation during configure phase of its lifecycle.
              * 
              * Creates subscriptions to topics "/serial_read" and "/serial_write", if topics are not available, then 
@@ -99,7 +99,7 @@ namespace rr_common_plugins
              * @param node concrete node shared pointer, used to create topic subscriptions
              * @return CallbackReturn, this is described in detail in function description.
              */
-            [[nodiscard]] CallbackReturn on_srv_configure(const rclcpp_lifecycle::State &state,
+            [[nodiscard]] CallbackReturn on_configure(const rclcpp_lifecycle::State &state,
                 rclcpp_lifecycle::LifecycleNode::SharedPtr node) override;
 
             /**
@@ -113,8 +113,8 @@ namespace rr_common_plugins
              * with Arduino to become available at some later stage.
              * 
              * Under any configuration errors, or topics are not currently available then GoalResponse::REJECT will be returned, this status should be 
-             * avoided, as it can be detected during configure stage of lifecycle when execution of 'on_srv_configure', this condition MAY also be triggered
-             * if on_srv_configure() was not called during configuration phase.
+             * avoided, as it can be detected during configure stage of lifecycle when execution of 'on_configure', this condition MAY also be triggered
+             * if on_configure() was not called during configuration phase.
              * 
              * @param uuid unique identified provided by ROS2 middleware, note that this retained as part of the return message and should be 
              * used in bagging services, along with stamp to trace results.

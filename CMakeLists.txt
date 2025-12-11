@@ -47,10 +47,10 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
   PROTOC_OUT_DIR "${PROTOC_OUT_DIR}"
 )
 
-add_library(rr_common_plugins 
+add_library(rr_common_plugins
   src/joy_subscriber_udp_plugin.cpp
-  src/imu_service_serial_plugin.cpp
-  ${PROTO_SRCS} 
+  src/imu_action_serial_plugin.cpp
+  ${PROTO_SRCS}
   ${PROTO_HDRS})
 
 add_library(rr_common_plugins::rr_common_plugins ALIAS rr_common_plugins)

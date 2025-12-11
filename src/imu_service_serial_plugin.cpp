@@ -284,14 +284,12 @@ namespace rr_common_plugins
 
         GoalResponse ImuServiceSerialPlugin::handle_goal(const GoalUUID &uuid, std::shared_ptr<const typename ActionType::Goal> goal)
         {
-            std::string device_name;
             {
                 const std::lock_guard<std::mutex> lock(g_i_mutex_);
-                std::string device_name = device_name_;
-            }
-            if (!(std::filesystem::exists(device_name_) && is_character_device(device_name))) {
-                RCLCPP_WARN(rclcpp::get_logger("ImuServiceSerialPlugin"), "Device does not exist: %s", device_name_.c_str());
-                return GoalResponse::ACCEPT_AND_DEFER;
+                if (!(std::filesystem::exists(device_name_) && is_character_device(device_name_))) {
+                    RCLCPP_WARN(rclcpp::get_logger("ImuServiceSerialPlugin"), "Device does not exist: %s", device_name_.c_str());
+                    return GoalResponse::ACCEPT_AND_DEFER;
+                }
             }
             goal_ = goal;
             uuid_ = uuid;

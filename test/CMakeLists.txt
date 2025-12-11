@@ -10,3 +10,9 @@ ament_add_gmock(${PROJECT_NAME}_joy_subscriber_udp_plugin_test
 )
 
 target_link_libraries(${PROJECT_NAME}_joy_subscriber_udp_plugin_test  rr_common_plugins)
+
+ament_add_gmock(${PROJECT_NAME}_imu_service_serial_plugin_test
+    imu_service_serial_plugin_test.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}_imu_service_serial_plugin_test  rr_common_plugins)

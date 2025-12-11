@@ -326,3 +326,4 @@ namespace rr_common_plugins
 
     } // namespace rr_serial_plugins
 } // namespace rr_common_plugins
+PLUGINLIB_EXPORT_CLASS(rr_common_plugins::rr_serial_plugins::ImuServiceSerialPlugin, rrobots::interfaces::RRImuServicePluginIface)

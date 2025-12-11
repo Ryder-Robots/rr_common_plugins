@@ -56,7 +56,7 @@ namespace rr_common_plugins
             goal_handle_->publish_feedback(feedback_msg);
 
             // if not executing leave method.
-            if(!goal_handle_->is_executing()) {
+            if (!goal_handle_->is_executing()) {
                 RCLCPP_ERROR(rclcpp::get_logger("ImuServiceSerialPlugin"),
                     "Not able to process request at this time");
                 feedback_msg->status = RRActionStatusE::ACTION_STATE_FAIL;
@@ -93,18 +93,27 @@ namespace rr_common_plugins
                 imu.orientation.y = imu_data.orientation().y();
                 imu.orientation.z = imu_data.orientation().z();
                 imu.orientation.w = imu_data.orientation().w();
+                for (auto i = 0; i < imu_data.orientation_covariance_size(); i++) {
+                    imu.orientation_covariance[i] = imu_data.orientation_covariance(i);
+                }
             }
 
             if (imu_data.has_angular_velocity()) {
                 imu.angular_velocity.x = imu_data.angular_velocity().x();
                 imu.angular_velocity.y = imu_data.angular_velocity().y();
                 imu.angular_velocity.z = imu_data.angular_velocity().z();
+                for (auto i = 0; i < imu_data.angular_velocity_covariance_size(); i++) {
+                    imu.angular_velocity_covariance[i] = imu_data.angular_velocity_covariance(i);
+                }
             }
 
             if (imu_data.has_linear_acceleration()) {
                 imu.linear_acceleration.x = imu_data.linear_acceleration().x();
                 imu.linear_acceleration.y = imu_data.linear_acceleration().y();
                 imu.linear_acceleration.z = imu_data.linear_acceleration().z();
+                for (auto i = 0; i < imu_data.linear_acceleration_covariance_size(); i++) {
+                    imu.linear_acceleration_covariance[i] = imu_data.linear_acceleration_covariance(i);
+                }
             }
 
             if (rclcpp::ok()) {
@@ -118,9 +127,11 @@ namespace rr_common_plugins
         void ImuServiceSerialPlugin::execute(const std::shared_ptr<GoalHandle> goal_handle)
         {
             auto result = std::make_shared<ActionType::Result>();
-            const std::lock_guard<std::mutex> lock(g_i_mutex_);
+            {
+                const std::lock_guard<std::mutex> lock(g_i_mutex_);
+                goal_handle_ = goal_handle;
+            }
 
-            // first set feedback.
             std::shared_ptr<IMUFeedback> feedback_msg = std::make_shared<IMUFeedback>();
             feedback_msg->status = RRActionStatusE::ACTION_STATE_PREPARING;
             goal_handle->publish_feedback(feedback_msg);
@@ -139,7 +150,7 @@ namespace rr_common_plugins
                 feedback_msg->status = RRActionStatusE::ACTION_STATE_FAIL;
                 goal_handle->publish_feedback(feedback_msg);
                 result->success = false;
-                goal_handle_->abort(result);
+                goal_handle->abort(result);
                 return;
             }
 
@@ -202,6 +213,12 @@ namespace rr_common_plugins
                 return 4;
             }
 
+            // protect with mutex
+            {
+                const std::lock_guard<std::mutex> lock(g_i_mutex_);
+                device_name_ = device_name;
+            }
+
             if (!std::filesystem::exists(device_name)) {
                 RCLCPP_WARN(node->get_logger(), "Device does not exist: %s", device_name.c_str());
                 return 5;
@@ -227,6 +244,7 @@ namespace rr_common_plugins
                 break;
 
             case 1:
+            case 2:
             case 3:
                 RCLCPP_ERROR(node->get_logger(), "possible recoverable error, can be attempted later");
                 return CallbackReturn::FAILURE;
@@ -266,6 +284,15 @@ namespace rr_common_plugins
 
         GoalResponse ImuServiceSerialPlugin::handle_goal(const GoalUUID &uuid, std::shared_ptr<const typename ActionType::Goal> goal)
         {
+            std::string device_name;
+            {
+                const std::lock_guard<std::mutex> lock(g_i_mutex_);
+                std::string device_name = device_name_;
+            }
+            if (!(std::filesystem::exists(device_name_) && is_character_device(device_name))) {
+                RCLCPP_WARN(rclcpp::get_logger("ImuServiceSerialPlugin"), "Device does not exist: %s", device_name_.c_str());
+                return GoalResponse::ACCEPT_AND_DEFER;
+            }
             goal_ = goal;
             uuid_ = uuid;
             return GoalResponse::ACCEPT_AND_EXECUTE;
@@ -274,16 +301,12 @@ namespace rr_common_plugins
         CancelResponse ImuServiceSerialPlugin::handle_cancel(
             const std::shared_ptr<GoalHandle> goal_handle)
         {
-            goal_handle_ = goal_handle;
-
+            (void)goal_handle;
             return CancelResponse::ACCEPT;
         }
 
         void ImuServiceSerialPlugin::handle_accepted(const std::shared_ptr<GoalHandle> goal_handle)
         {
-            // implementation
-            goal_handle_ = goal_handle;
-
             // publish request then this needs to be done be done in thread.
             auto execute_in_thread = [this, goal_handle]() { return this->execute(goal_handle); };
             std::thread {execute_in_thread}.detach();

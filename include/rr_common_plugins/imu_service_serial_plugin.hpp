@@ -65,6 +65,7 @@ namespace rr_common_plugins
 
             rclcpp::Subscription<UInt8MultiArray>::SharedPtr subscription_ = nullptr;
             rclcpp_lifecycle::LifecyclePublisher<UInt8MultiArray>::SharedPtr publisher_ = nullptr;
+            std::string device_name_ = "";
 
             // internal methods, note these are the methods that will do the work.
             void subscriber_cb(const UInt8MultiArray::UniquePtr &packet);
@@ -78,8 +79,8 @@ namespace rr_common_plugins
             const std::string READ_TOPIC_ = "/serial_read";
 
             // standard mutex to help with threading.
-            std::mutex g_i_mutex_; 
-
+            std::mutex g_i_mutex_;
+          
           public:
             ImuServiceSerialPlugin() = default;
             ~ImuServiceSerialPlugin() = default;

@@ -3,4 +3,9 @@
     <description>UDP deserializer for Joysticks</description>
     <name>rr_joy_udp_plugin</name>
   </class>
+
+  <class type="rr_common_plugins::rr_serial_plugins::ImuActionSerialPlugin" base_class_type="rrobots::interfaces::RRImuActionPluginIface">
+    <description>Serial USB driver for IMU</description>
+    <name>rr_imu_serial_action_plugin</name>
+  </class>
 </library>

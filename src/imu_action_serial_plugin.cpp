@@ -165,98 +165,9 @@ namespace rr_common_plugins
             goal_handle->publish_feedback(feedback_msg);
         }
 
-        /**
-         * Verify that the file references character device.
-         */
-        bool ImuActionSerialPlugin::is_character_device(const std::string &path)
-        {
-            struct stat buffer;
-            if (stat(path.c_str(), &buffer) != 0) {
-                return false;
-            }
-            return S_ISCHR(buffer.st_mode);
-        }
-
-
-        /**
-         * TODO: When other plugins are added move checking to common base class.
-         * Perform various checks to ensure transport node is available.
-         */
-        uint8_t ImuActionSerialPlugin::transport_available(LifecycleNode::SharedPtr node)
-        {
-            auto parameters_client = std::make_shared<rclcpp::AsyncParametersClient>(
-                node,
-                "serial_driver");
-
-            if (!parameters_client->wait_for_service(std::chrono::seconds(2))) {
-                RCLCPP_ERROR(node->get_logger(), "serial_driver parameter service unavailable");
-                return 1;
-            }
-
-            auto future = parameters_client->get_parameters({"device_name"});
-
-            if (rclcpp::spin_until_future_complete(node, future, std::chrono::seconds(1)) !=
-                rclcpp::FutureReturnCode::SUCCESS) {
-                RCLCPP_ERROR(node->get_logger(), "Failed to retrieve device_name parameter");
-                return 2;
-            }
-
-            auto values = future.get();
-            if (values.empty()) {
-                RCLCPP_ERROR(node->get_logger(), "device_name parameter not found");
-                return 3;
-            }
-
-            std::string device_name = values[0].as_string();
-            if (device_name.empty()) {
-                RCLCPP_ERROR(node->get_logger(), "device_name parameter is empty");
-                return 4;
-            }
-
-            // protect with mutex
-            {
-                const std::lock_guard<std::mutex> lock(g_i_mutex_);
-                device_name_ = device_name;
-            }
-
-            if (!std::filesystem::exists(device_name)) {
-                RCLCPP_WARN(node->get_logger(), "Device does not exist: %s", device_name.c_str());
-                return 5;
-            }
-
-            if (!is_character_device(device_name)) {
-                RCLCPP_ERROR(node->get_logger(), "Device is not a character device: %s", device_name.c_str());
-                return 6;
-            }
-
-            RCLCPP_INFO(node->get_logger(), "Transport available: %s", device_name.c_str());
-            return 0;
-        }
-
-        // TODO: move to on_configure, mkae it clearer.
         CallbackReturn ImuActionSerialPlugin::on_configure(const State &state, LifecycleNode::SharedPtr node)
         {
             (void)state;
-
-            switch (transport_available(node)) {
-            case 0:
-                RCLCPP_DEBUG(node->get_logger(), "Node checks passed inilizing");
-                break;
-
-            case 1:
-            case 2:
-            case 3:
-                RCLCPP_ERROR(node->get_logger(), "possible recoverable error, can be attempted later");
-                return CallbackReturn::FAILURE;
-
-            case 4:
-            case 5:
-            case 6:
-                RCLCPP_FATAL(node->get_logger(), "unrecoverable error");
-                return CallbackReturn::ERROR;
-            }
-
-
             auto topic_names_and_types = node->get_topic_names_and_types();
             auto found = false;
             for (std::string t : {"/serial_read", "/serial_write"}) {
@@ -284,13 +195,6 @@ namespace rr_common_plugins
 
         GoalResponse ImuActionSerialPlugin::handle_goal(const GoalUUID &uuid, std::shared_ptr<const typename ActionType::Goal> goal)
         {
-            {
-                const std::lock_guard<std::mutex> lock(g_i_mutex_);
-                if (!(std::filesystem::exists(device_name_) && is_character_device(device_name_))) {
-                    RCLCPP_WARN(rclcpp::get_logger("ImuActionSerialPlugin"), "Device does not exist: %s", device_name_.c_str());
-                    return GoalResponse::ACCEPT_AND_DEFER;
-                }
-            }
             goal_ = goal;
             uuid_ = uuid;
             return GoalResponse::ACCEPT_AND_EXECUTE;

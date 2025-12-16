@@ -65,15 +65,11 @@ namespace rr_common_plugins
 
             rclcpp::Subscription<UInt8MultiArray>::SharedPtr subscription_ = nullptr;
             rclcpp_lifecycle::LifecyclePublisher<UInt8MultiArray>::SharedPtr publisher_ = nullptr;
-            std::string device_name_ = "";
+
 
             // internal methods, note these are the methods that will do the work.
             void subscriber_cb(const UInt8MultiArray::UniquePtr &packet);
             void execute(const std::shared_ptr<GoalHandle> goal_handle);
-
-            // internal method, checks for USB device that transport driver is using, and that the file exists.
-            uint8_t transport_available(rclcpp_lifecycle::LifecycleNode::SharedPtr node);
-            bool is_character_device(const std::string &path);
 
             const std::string WRITE_TOPIC_ = "/serial_write";
             const std::string READ_TOPIC_ = "/serial_read";
@@ -92,8 +88,6 @@ namespace rr_common_plugins
              * Creates subscriptions to topics "/serial_read" and "/serial_write", if topics are not available, then 
              * action will be considered "failed". This will return CallbackReturn::TRANSITION_CALLBACK_FAILURE.
              * 
-             * If erroneous configuration occurs, that will stop the action from operating, regardless of if topics 
-             * become available at a later stage, then  CallbackReturn::TRANSITION_CALLBACK_ERROR will be returned.
              * 
              * @param state previous or current state of concrete node, or the state of previous lifecycle method.
              * @param node concrete node shared pointer, used to create topic subscriptions
@@ -106,15 +100,7 @@ namespace rr_common_plugins
              * @fn handle_goal
              * @brief returns availability of the requested goal.
              * 
-             * provided configuration errors, or USB errors are not detected then this will return GoalResponse::ACCEPT_AND_EXECUTE 
-             * which should be interpreted that the action will attempt to send protobuf IMU monitor at the time that this request was recieved.
-             * 
-             * if USB is unavailable then GoalResponse::ACCEPT_AND_DEFER MAY be returned indicating that the action is waiting for communications
-             * with Arduino to become available at some later stage.
-             * 
-             * Under any configuration errors, or topics are not currently available then GoalResponse::REJECT will be returned, this status should be 
-             * avoided, as it can be detected during configure stage of lifecycle when execution of 'on_configure', this condition MAY also be triggered
-             * if on_configure() was not called during configuration phase.
+             * Stores UUID and Goal reference for later use.
              * 
              * @param uuid unique identified provided by ROS2 middleware, note that this retained as part of the return message and should be 
              * used in bagging services, along with stamp to trace results.

@@ -53,17 +53,15 @@ namespace rr_common_plugins
         void ImuActionSerialPlugin::subscriber_cb(const UInt8MultiArray::UniquePtr &packet)
         {
             const std::lock_guard<std::mutex> lock(g_i_mutex_);
-
+            auto result = std::make_shared<ActionType::Result>();
+            if (!(is_executing_ || is_cancelling_)) {
+                return; // Ignore messages when no active goal
+            }
             if (goal_handle_ == nullptr) {
                 RCLCPP_FATAL(logger_, "goal handle was not created");
                 return;
             }
-            auto result = std::make_shared<ActionType::Result>();
-            if (!(is_executing_ || is_cancelling_)) {
-                goal_handle_->canceled(result);
-                is_cancelling_ = false;
-                return; // Ignore messages when no active goal
-            }
+
             std::shared_ptr<IMUFeedback> feedback_msg = std::make_shared<IMUFeedback>();
             feedback_msg->status = RRActionStatusE::ACTION_STATE_PROCESSING;
             goal_handle_->publish_feedback(feedback_msg);
@@ -75,6 +73,7 @@ namespace rr_common_plugins
                 goal_handle_->publish_feedback(feedback_msg);
                 result->success = false;
                 goal_handle_->abort(result);
+                is_executing_ = false;
                 return;
             }
 
@@ -86,6 +85,7 @@ namespace rr_common_plugins
                 goal_handle_->publish_feedback(feedback_msg);
                 result->success = false;
                 goal_handle_->abort(result);
+                is_executing_ = false;
                 return;
             }
 
@@ -184,6 +184,12 @@ namespace rr_common_plugins
                 goal_handle->publish_feedback(feedback_msg);
                 result->success = false;
                 goal_handle->abort(result);
+
+                {
+                    const std::lock_guard<std::mutex> lock(g_i_mutex_);
+                    is_executing_ = false;
+                    is_cancelling_ = false;
+                }
                 return;
             }
 
@@ -200,7 +206,7 @@ namespace rr_common_plugins
             auto status = response_future_.wait_for(timeout);
             {
                 const std::lock_guard<std::mutex> lock(g_i_mutex_);
-                if (status == std::future_status::timeout) {
+                if (status == std::future_status::timeout && goal_handle->is_executing()) {
                     RCLCPP_ERROR(logger_, "Timeout waiting for IMU response");
                     feedback_msg->status = RRActionStatusE::ACTION_STATE_FAIL;
                     goal_handle->publish_feedback(feedback_msg);
@@ -242,6 +248,7 @@ namespace rr_common_plugins
 
         GoalResponse ImuActionSerialPlugin::handle_goal(const GoalUUID &uuid, std::shared_ptr<const typename ActionType::Goal> goal)
         {
+            (void)uuid;
             {
                 const std::lock_guard<std::mutex> lock(g_i_mutex_);
                 if (is_executing_) {
@@ -254,7 +261,6 @@ namespace rr_common_plugins
                 }
 
                 goal_ = goal;
-                uuid_ = uuid;
             }
             return GoalResponse::ACCEPT_AND_EXECUTE;
         }
@@ -262,10 +268,32 @@ namespace rr_common_plugins
         CancelResponse ImuActionSerialPlugin::handle_cancel(
             const std::shared_ptr<GoalHandle> goal_handle)
         {
-            (void)goal_handle;
             const std::lock_guard<std::mutex> lock(g_i_mutex_);
+
+            // Verify this is the current goal
+            if (goal_handle_ != goal_handle) {
+                RCLCPP_WARN(logger_, "Cancel request for non-current goal");
+                return CancelResponse::REJECT;
+            }
+
+            if (!is_executing_) {
+                RCLCPP_WARN(logger_, "Cannot cancel - goal not executing");
+                return CancelResponse::REJECT;
+            }
+
+            // Set canceling flag
             is_cancelling_ = true;
 
+            // Wake up execute() thread immediately by satisfying the promise
+            try {
+                response_promise_.set_exception(
+                    std::make_exception_ptr(std::runtime_error("Goal canceled by user")));
+            }
+            catch (const std::future_error &) {
+                // Promise already satisfied, that's fine
+            }
+
+            RCLCPP_INFO(logger_, "Goal cancellation requested");
             return CancelResponse::ACCEPT;
         }
 
@@ -304,6 +332,25 @@ namespace rr_common_plugins
             }
 
             publisher_->on_deactivate();
+            return CallbackReturn::SUCCESS;
+        }
+
+        CallbackReturn ImuActionSerialPlugin::on_cleanup(const State &state)
+        {
+            (void)state;
+            // Ensure thread is stopped
+            if (execution_thread_.joinable()) {
+                execution_thread_.join();
+            }
+
+            std::lock_guard<std::mutex> lock(g_i_mutex_);
+            // Reset resources
+            subscription_.reset();
+            publisher_.reset();
+            goal_handle_ = nullptr;
+            is_executing_ = false;
+            is_cancelling_ = false;
+
             return CallbackReturn::SUCCESS;
         }
 

@@ -59,11 +59,8 @@ namespace rr_common_plugins
 
           private:
             // current transaction UUID
-            rclcpp_action::GoalUUID uuid_;
-            rclcpp_action::GoalResponse goal_response_;
             std::shared_ptr<const typename ActionType::Goal> goal_;
             std::shared_ptr<GoalHandle> goal_handle_ = nullptr;
-            std::deque<std::thread> thread_queue_;
             std::promise<void> response_promise_;
             std::future<void> response_future_;
 
@@ -77,7 +74,6 @@ namespace rr_common_plugins
 
             const std::string WRITE_TOPIC_ = "/serial_write";
             const std::string READ_TOPIC_ = "/serial_read";
-            const size_t MAX_THREAD = 10;
 
             // standard mutex to help with threading.
             std::thread execution_thread_;
@@ -157,6 +153,8 @@ namespace rr_common_plugins
              * @brief performs lifecycle deactivation routines
              */
             [[nodiscard]] CallbackReturn on_deactivate(const State &state) override;
+
+            [[nodiscard]] CallbackReturn on_cleanup(const State &state) override;
         };
     } // namespace rr_serial_plugins
 } // namespace rr_common_plugins

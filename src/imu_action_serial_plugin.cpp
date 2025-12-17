@@ -48,7 +48,7 @@ namespace rr_common_plugins
         }
 
         /**
-         * called each time a packet is recieved.
+         * called each time a packet is received.
          */
         void ImuActionSerialPlugin::subscriber_cb(const UInt8MultiArray::UniquePtr &packet)
         {
@@ -144,22 +144,14 @@ namespace rr_common_plugins
         }
 
         /*
-         * Plugin uses threads to allow imediate returns for lifecycle calls, however only
+         * Plugin uses threads to allow immediate returns for lifecycle calls, however only
          * one request is processed at a given time.
          */
         void ImuActionSerialPlugin::execute(const std::shared_ptr<GoalHandle> goal_handle)
         {
             auto result = std::make_shared<ActionType::Result>();
             {
-                // block any requests from comming until finished with this one.
                 const std::lock_guard<std::mutex> lock(g_i_mutex_);
-
-                if (is_cancelling_) {
-                    goal_handle->canceled(result);
-                    is_cancelling_ = false;
-                    return;
-                }
-
                 is_executing_ = true;
                 goal_handle_ = goal_handle;
                 response_promise_ = std::promise<void>();
@@ -179,12 +171,12 @@ namespace rr_common_plugins
 
             if (!req.SerializeToString(&serialized_data)) {
                 RCLCPP_ERROR(logger_, "Failed to serialize request");
-
                 feedback_msg->status = RRActionStatusE::ACTION_STATE_FAIL;
                 goal_handle->publish_feedback(feedback_msg);
                 result->success = false;
                 goal_handle->abort(result);
 
+                // Just clean up and return - no waiting!
                 {
                     const std::lock_guard<std::mutex> lock(g_i_mutex_);
                     is_executing_ = false;
@@ -202,17 +194,32 @@ namespace rr_common_plugins
             publisher_->publish(msg);
             feedback_msg->status = RRActionStatusE::ACTION_STATE_SENT;
             goal_handle->publish_feedback(feedback_msg);
+
+            // NOW wait for response (only once, only after publishing)
             auto timeout = std::chrono::seconds(5);
             auto status = response_future_.wait_for(timeout);
             {
                 const std::lock_guard<std::mutex> lock(g_i_mutex_);
-                if (status == std::future_status::timeout && goal_handle->is_executing()) {
+
+                // Handle cancellation
+                if (is_cancelling_) {
+                    try {
+                        response_future_.get();
+                    }
+                    catch (const std::exception &e) {
+                        RCLCPP_INFO(logger_, "Goal canceled: %s", e.what());
+                        goal_handle->canceled(result);
+                    }
+                }
+                else if (status == std::future_status::timeout && goal_handle->is_executing()) {
                     RCLCPP_ERROR(logger_, "Timeout waiting for IMU response");
                     feedback_msg->status = RRActionStatusE::ACTION_STATE_FAIL;
                     goal_handle->publish_feedback(feedback_msg);
                     result->success = false;
                     goal_handle->abort(result);
                 }
+                // If status == ready and !is_cancelling_, success handled in subscriber_cb
+
                 is_executing_ = false;
                 is_cancelling_ = false;
             }
@@ -253,7 +260,7 @@ namespace rr_common_plugins
                 const std::lock_guard<std::mutex> lock(g_i_mutex_);
                 if (is_executing_) {
                     // Resource busy.
-                    RCLCPP_WARN(logger_, "resouce is busy with last request, rejecting new request.");
+                    RCLCPP_WARN(logger_, "resource is busy with last request, rejecting new request.");
                     return GoalResponse::REJECT;
                 }
                 if (execution_thread_.joinable()) {

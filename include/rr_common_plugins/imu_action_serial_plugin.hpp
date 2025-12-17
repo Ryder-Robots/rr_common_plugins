@@ -20,19 +20,19 @@
 
 #pragma once
 
-#include "rr_common_base/rr_imu_action_plugin_iface.hpp"
 #include "rr_common_base/rr_constants.hpp"
+#include "rr_common_base/rr_imu_action_plugin_iface.hpp"
+#include "rr_common_plugins/generated/rr_serial.pb.h"
 #include "rr_common_plugins/visibility_control.h"
 #include "rr_interfaces/action/monitor_imu_action.hpp"
+#include <deque>
 #include <filesystem>
 #include <memory>
-#include <pluginlib/class_list_macros.hpp>
-#include <std_msgs/msg/u_int8_multi_array.hpp>
-#include <sensor_msgs/msg/imu.hpp>
-#include <sys/stat.h>
-#include "rr_common_plugins/generated/rr_serial.pb.h"
 #include <mutex>
-#include <deque>
+#include <pluginlib/class_list_macros.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <std_msgs/msg/u_int8_multi_array.hpp>
+#include <sys/stat.h>
 
 
 namespace rr_common_plugins
@@ -64,6 +64,8 @@ namespace rr_common_plugins
             std::shared_ptr<const typename ActionType::Goal> goal_;
             std::shared_ptr<GoalHandle> goal_handle_ = nullptr;
             std::deque<std::thread> thread_queue_;
+            std::promise<void> response_promise_;
+            std::future<void> response_future_;
 
             rclcpp::Subscription<UInt8MultiArray>::SharedPtr subscription_ = nullptr;
             rclcpp_lifecycle::LifecyclePublisher<UInt8MultiArray>::SharedPtr publisher_ = nullptr;
@@ -81,7 +83,9 @@ namespace rr_common_plugins
             std::thread execution_thread_;
             std::mutex g_i_mutex_;
             bool is_executing_ = false;
-          
+            bool is_cancelling_ = false;
+            rclcpp::Logger logger_ = rclcpp::get_logger("ImuActionSerialPlugin");
+
           public:
             ImuActionSerialPlugin() : execution_thread_() {}
             ~ImuActionSerialPlugin();

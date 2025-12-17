@@ -53,20 +53,24 @@ namespace rr_common_plugins
         void ImuActionSerialPlugin::subscriber_cb(const UInt8MultiArray::UniquePtr &packet)
         {
             const std::lock_guard<std::mutex> lock(g_i_mutex_);
+
             if (goal_handle_ == nullptr) {
-                RCLCPP_FATAL(rclcpp::get_logger("ImuActionSerialPlugin"),
-                    "goal handle was not created");
+                RCLCPP_FATAL(logger_, "goal handle was not created");
                 return;
             }
             auto result = std::make_shared<ActionType::Result>();
+            if (!(is_executing_ || is_cancelling_)) {
+                goal_handle_->canceled(result);
+                is_cancelling_ = false;
+                return; // Ignore messages when no active goal
+            }
             std::shared_ptr<IMUFeedback> feedback_msg = std::make_shared<IMUFeedback>();
             feedback_msg->status = RRActionStatusE::ACTION_STATE_PROCESSING;
             goal_handle_->publish_feedback(feedback_msg);
 
             // if not executing leave method.
             if (!goal_handle_->is_executing()) {
-                RCLCPP_ERROR(rclcpp::get_logger("ImuActionSerialPlugin"),
-                    "Not able to process request at this time");
+                RCLCPP_ERROR(logger_, "Not able to process request at this time");
                 feedback_msg->status = RRActionStatusE::ACTION_STATE_FAIL;
                 goal_handle_->publish_feedback(feedback_msg);
                 result->success = false;
@@ -77,8 +81,7 @@ namespace rr_common_plugins
             // begin deserializing packet.
             org::ryderrobots::ros2::serial::Response res;
             if (!res.ParseFromArray(packet->data.data(), packet->data.size())) {
-                RCLCPP_ERROR(rclcpp::get_logger("ImuActionSerialPlugin"),
-                    "Failed to deserialize response packet");
+                RCLCPP_ERROR(logger_, "Failed to deserialize response packet");
                 feedback_msg->status = RRActionStatusE::ACTION_STATE_FAIL;
                 goal_handle_->publish_feedback(feedback_msg);
                 result->success = false;
@@ -129,6 +132,14 @@ namespace rr_common_plugins
                 goal_handle_->succeed(result);
                 feedback_msg->status = RRActionStatusE::ACTION_STATE_SUCCESS;
                 goal_handle_->publish_feedback(feedback_msg);
+
+                // Signal completion to unblock execute() timeout wait
+                try {
+                    response_promise_.set_value();
+                }
+                catch (const std::future_error &) {
+                    // Promise already satisfied or moved, ignore
+                }
             }
         }
 
@@ -142,8 +153,17 @@ namespace rr_common_plugins
             {
                 // block any requests from comming until finished with this one.
                 const std::lock_guard<std::mutex> lock(g_i_mutex_);
+
+                if (is_cancelling_) {
+                    goal_handle->canceled(result);
+                    is_cancelling_ = false;
+                    return;
+                }
+
                 is_executing_ = true;
                 goal_handle_ = goal_handle;
+                response_promise_ = std::promise<void>();
+                response_future_ = response_promise_.get_future();
             }
 
             std::shared_ptr<IMUFeedback> feedback_msg = std::make_shared<IMUFeedback>();
@@ -158,8 +178,7 @@ namespace rr_common_plugins
             std::string serialized_data;
 
             if (!req.SerializeToString(&serialized_data)) {
-                RCLCPP_ERROR(rclcpp::get_logger("ImuActionSerialPlugin"),
-                    "Failed to serialize request");
+                RCLCPP_ERROR(logger_, "Failed to serialize request");
 
                 feedback_msg->status = RRActionStatusE::ACTION_STATE_FAIL;
                 goal_handle->publish_feedback(feedback_msg);
@@ -177,9 +196,19 @@ namespace rr_common_plugins
             publisher_->publish(msg);
             feedback_msg->status = RRActionStatusE::ACTION_STATE_SENT;
             goal_handle->publish_feedback(feedback_msg);
+            auto timeout = std::chrono::seconds(5);
+            auto status = response_future_.wait_for(timeout);
             {
                 const std::lock_guard<std::mutex> lock(g_i_mutex_);
+                if (status == std::future_status::timeout) {
+                    RCLCPP_ERROR(logger_, "Timeout waiting for IMU response");
+                    feedback_msg->status = RRActionStatusE::ACTION_STATE_FAIL;
+                    goal_handle->publish_feedback(feedback_msg);
+                    result->success = false;
+                    goal_handle->abort(result);
+                }
                 is_executing_ = false;
+                is_cancelling_ = false;
             }
         }
 
@@ -196,7 +225,7 @@ namespace rr_common_plugins
                     }
                 }
                 if (!found) {
-                    RCLCPP_ERROR(node->get_logger(), "topics are not available");
+                    RCLCPP_ERROR(logger_, "topics are not available");
                     return CallbackReturn::FAILURE;
                 }
                 found = false;
@@ -217,8 +246,7 @@ namespace rr_common_plugins
                 const std::lock_guard<std::mutex> lock(g_i_mutex_);
                 if (is_executing_) {
                     // Resource busy.
-                    RCLCPP_WARN(rclcpp::get_logger("ImuActionSerialPlugin"),
-                        "resouce is busy with last request, rejecting new request.");
+                    RCLCPP_WARN(logger_, "resouce is busy with last request, rejecting new request.");
                     return GoalResponse::REJECT;
                 }
                 if (execution_thread_.joinable()) {
@@ -235,6 +263,9 @@ namespace rr_common_plugins
             const std::shared_ptr<GoalHandle> goal_handle)
         {
             (void)goal_handle;
+            const std::lock_guard<std::mutex> lock(g_i_mutex_);
+            is_cancelling_ = true;
+
             return CancelResponse::ACCEPT;
         }
 
@@ -244,6 +275,7 @@ namespace rr_common_plugins
          */
         void ImuActionSerialPlugin::handle_accepted(const std::shared_ptr<GoalHandle> goal_handle)
         {
+            std::lock_guard<std::mutex> lock(g_i_mutex_);
             if (execution_thread_.joinable()) {
                 execution_thread_.join();
             }

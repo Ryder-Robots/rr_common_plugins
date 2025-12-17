@@ -38,6 +38,14 @@ namespace rr_common_plugins
 {
     namespace rr_serial_plugins
     {
+        ImuActionSerialPlugin::~ImuActionSerialPlugin()
+        {
+            // This should not be necessary, it is here in case of critical malfunction, thread shoudl be
+            // closed at deactivate.
+            if (execution_thread_.joinable()) {
+                execution_thread_.join();
+            }
+        }
 
         /**
          * called each time a packet is recieved.
@@ -124,11 +132,17 @@ namespace rr_common_plugins
             }
         }
 
+        /*
+         * Plugin uses threads to allow imediate returns for lifecycle calls, however only
+         * one request is processed at a given time.
+         */
         void ImuActionSerialPlugin::execute(const std::shared_ptr<GoalHandle> goal_handle)
         {
             auto result = std::make_shared<ActionType::Result>();
             {
+                // block any requests from comming until finished with this one.
                 const std::lock_guard<std::mutex> lock(g_i_mutex_);
+                is_executing_ = true;
                 goal_handle_ = goal_handle;
             }
 
@@ -163,6 +177,10 @@ namespace rr_common_plugins
             publisher_->publish(msg);
             feedback_msg->status = RRActionStatusE::ACTION_STATE_SENT;
             goal_handle->publish_feedback(feedback_msg);
+            {
+                const std::lock_guard<std::mutex> lock(g_i_mutex_);
+                is_executing_ = false;
+            }
         }
 
         CallbackReturn ImuActionSerialPlugin::on_configure(const State &state, LifecycleNode::SharedPtr node)
@@ -195,8 +213,21 @@ namespace rr_common_plugins
 
         GoalResponse ImuActionSerialPlugin::handle_goal(const GoalUUID &uuid, std::shared_ptr<const typename ActionType::Goal> goal)
         {
-            goal_ = goal;
-            uuid_ = uuid;
+            {
+                const std::lock_guard<std::mutex> lock(g_i_mutex_);
+                if (is_executing_) {
+                    // Resource busy.
+                    RCLCPP_WARN(rclcpp::get_logger("ImuActionSerialPlugin"),
+                        "resouce is busy with last request, rejecting new request.");
+                    return GoalResponse::REJECT;
+                }
+                if (execution_thread_.joinable()) {
+                    execution_thread_.join();
+                }
+
+                goal_ = goal;
+                uuid_ = uuid;
+            }
             return GoalResponse::ACCEPT_AND_EXECUTE;
         }
 
@@ -207,11 +238,21 @@ namespace rr_common_plugins
             return CancelResponse::ACCEPT;
         }
 
+        /**
+         * while this routine should not block, it also should not allow more than one thread to run.
+         * therefore there is only one future that is accepted.
+         */
         void ImuActionSerialPlugin::handle_accepted(const std::shared_ptr<GoalHandle> goal_handle)
         {
+            if (execution_thread_.joinable()) {
+                execution_thread_.join();
+            }
+
+            // move assignment for safety.
+            execution_thread_ = std::thread();
             // publish request then this needs to be done be done in thread.
             auto execute_in_thread = [this, goal_handle]() { return this->execute(goal_handle); };
-            std::thread {execute_in_thread}.detach();
+            execution_thread_ = std::thread(execute_in_thread);
         }
 
         CallbackReturn ImuActionSerialPlugin::on_activate(const State &state)
@@ -224,6 +265,12 @@ namespace rr_common_plugins
         CallbackReturn ImuActionSerialPlugin::on_deactivate(const State &state)
         {
             (void)state;
+
+            // gracefully wait for last request
+            if (execution_thread_.joinable()) {
+                execution_thread_.join();
+            }
+
             publisher_->on_deactivate();
             return CallbackReturn::SUCCESS;
         }

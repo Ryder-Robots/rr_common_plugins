@@ -32,6 +32,7 @@
 #include <sys/stat.h>
 #include "rr_common_plugins/generated/rr_serial.pb.h"
 #include <mutex>
+#include <deque>
 
 
 namespace rr_common_plugins
@@ -62,6 +63,7 @@ namespace rr_common_plugins
             rclcpp_action::GoalResponse goal_response_;
             std::shared_ptr<const typename ActionType::Goal> goal_;
             std::shared_ptr<GoalHandle> goal_handle_ = nullptr;
+            std::deque<std::thread> thread_queue_;
 
             rclcpp::Subscription<UInt8MultiArray>::SharedPtr subscription_ = nullptr;
             rclcpp_lifecycle::LifecyclePublisher<UInt8MultiArray>::SharedPtr publisher_ = nullptr;
@@ -73,13 +75,16 @@ namespace rr_common_plugins
 
             const std::string WRITE_TOPIC_ = "/serial_write";
             const std::string READ_TOPIC_ = "/serial_read";
+            const size_t MAX_THREAD = 10;
 
             // standard mutex to help with threading.
+            std::thread execution_thread_;
             std::mutex g_i_mutex_;
+            bool is_executing_ = false;
           
           public:
-            ImuActionSerialPlugin() = default;
-            ~ImuActionSerialPlugin() = default;
+            ImuActionSerialPlugin() : execution_thread_() {}
+            ~ImuActionSerialPlugin();
 
             /**
              * @fn on_configure

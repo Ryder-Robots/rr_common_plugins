@@ -57,7 +57,6 @@ namespace rr_common_plugins
 
           private:
             // current transaction UUID
-            std::shared_ptr<const typename ActionType::Goal> goal_;
             std::shared_ptr<GoalHandle> goal_handle_ = nullptr;
             std::promise<void> response_promise_;
             std::future<void> response_future_;

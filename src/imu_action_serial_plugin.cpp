@@ -256,6 +256,7 @@ namespace rr_common_plugins
         GoalResponse ImuActionSerialPlugin::handle_goal(const GoalUUID &uuid, std::shared_ptr<const typename ActionType::Goal> goal)
         {
             (void)uuid;
+            (void)goal;
             {
                 const std::lock_guard<std::mutex> lock(g_i_mutex_);
                 if (is_executing_) {
@@ -266,8 +267,6 @@ namespace rr_common_plugins
                 if (execution_thread_.joinable()) {
                     execution_thread_.join();
                 }
-
-                goal_ = goal;
             }
             return GoalResponse::ACCEPT_AND_EXECUTE;
         }

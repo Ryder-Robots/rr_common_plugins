@@ -52,86 +52,82 @@ namespace rr_common_plugins
          */
         void ImuActionSerialPlugin::subscriber_cb(const UInt8MultiArray::UniquePtr &packet)
         {
-            const std::lock_guard<std::mutex> lock(g_i_mutex_);
-            auto result = std::make_shared<ActionType::Result>();
-            if (!(is_executing_ || is_cancelling_)) {
-                return; // Ignore messages when no active goal
-            }
-            if (goal_handle_ == nullptr) {
-                RCLCPP_FATAL(logger_, "goal handle was not created");
+            if (!packet || packet->data.empty()) {
                 return;
             }
 
-            std::shared_ptr<IMUFeedback> feedback_msg = std::make_shared<IMUFeedback>();
-            feedback_msg->status = RRActionStatusE::ACTION_STATE_PROCESSING;
-            goal_handle_->publish_feedback(feedback_msg);
+            // Quick state check with minimal lock
+            bool should_process = false;
+            {
+                const std::lock_guard<std::mutex> lock(g_i_mutex_);
+                if (is_executing_ && goal_handle_ && goal_handle_->is_executing()) {
+                    should_process = true;
+                }
+            }
 
-            // if not executing leave method.
-            if (!goal_handle_->is_executing()) {
-                RCLCPP_ERROR(logger_, "Not able to process request at this time");
-                feedback_msg->status = RRActionStatusE::ACTION_STATE_FAIL;
-                goal_handle_->publish_feedback(feedback_msg);
-                result->success = false;
-                goal_handle_->abort(result);
-                is_executing_ = false;
+            if (!should_process) {
                 return;
             }
 
-            // begin deserializing packet.
+            // Check buffer overflow before accumulating
+            if (buffer_.size() + packet->data.size() > BUFSIZ) {
+                RCLCPP_ERROR(logger_, "Buffer overflow - packet too large");
+                buffer_.clear();
+                abort_goal_with_error(RRActionStatusE::ACTION_STATE_FAIL);
+                return;
+            }
+
+            // Efficiently accumulate data and check for terminator
+            bool complete = false;
+            auto term_it = std::find(packet->data.begin(), packet->data.end(), TERM_CHAR);
+
+            if (term_it != packet->data.end()) {
+                buffer_.append(packet->data.begin(), term_it);
+                complete = true;
+            } else {
+                buffer_.append(packet->data.begin(), packet->data.end());
+            }
+
+            if (!complete) {
+                return;  // Wait for more data
+            }
+
+            // Parse complete message
             org::ryderrobots::ros2::serial::Response res;
-            if (!res.ParseFromArray(packet->data.data(), packet->data.size())) {
+            if (!res.ParseFromString(buffer_)) {
                 RCLCPP_ERROR(logger_, "Failed to deserialize response packet");
-                feedback_msg->status = RRActionStatusE::ACTION_STATE_FAIL;
-                goal_handle_->publish_feedback(feedback_msg);
-                result->success = false;
-                goal_handle_->abort(result);
-                is_executing_ = false;
+                buffer_.clear();
+                abort_goal_with_error(RRActionStatusE::ACTION_STATE_FAIL);
                 return;
             }
+            buffer_.clear();
 
+            // Filter non-IMU messages
             if (res.op() != RROpCodeE::MSP_RAW_IMU) {
-                // not an error, just dont need to care about anything that is not IMU.
                 return;
             }
-            const auto &imu_data = res.msp_raw_imu();
-            rclcpp::Clock clock(RCL_ROS_TIME);
-            sensor_msgs::msg::Imu imu;
-            imu.header.frame_id = rr_constants::LINK_IMU;
-            imu.header.stamp = clock.now();
 
-            if (imu_data.has_orientation()) {
-                imu.orientation.x = imu_data.orientation().x();
-                imu.orientation.y = imu_data.orientation().y();
-                imu.orientation.z = imu_data.orientation().z();
-                imu.orientation.w = imu_data.orientation().w();
-                for (auto i = 0; i < imu_data.orientation_covariance_size(); i++) {
-                    imu.orientation_covariance[i] = imu_data.orientation_covariance(i);
+            // Build IMU message (no lock needed)
+            sensor_msgs::msg::Imu imu = build_imu_message_from_data(res.msp_raw_imu());
+
+            // Publish result with lock
+            {
+                const std::lock_guard<std::mutex> lock(g_i_mutex_);
+
+                // Double-check goal is still valid
+                if (!goal_handle_ || !goal_handle_->is_executing()) {
+                    return;
                 }
-            }
 
-            if (imu_data.has_angular_velocity()) {
-                imu.angular_velocity.x = imu_data.angular_velocity().x();
-                imu.angular_velocity.y = imu_data.angular_velocity().y();
-                imu.angular_velocity.z = imu_data.angular_velocity().z();
-                for (auto i = 0; i < imu_data.angular_velocity_covariance_size(); i++) {
-                    imu.angular_velocity_covariance[i] = imu_data.angular_velocity_covariance(i);
-                }
-            }
-
-            if (imu_data.has_linear_acceleration()) {
-                imu.linear_acceleration.x = imu_data.linear_acceleration().x();
-                imu.linear_acceleration.y = imu_data.linear_acceleration().y();
-                imu.linear_acceleration.z = imu_data.linear_acceleration().z();
-                for (auto i = 0; i < imu_data.linear_acceleration_covariance_size(); i++) {
-                    imu.linear_acceleration_covariance[i] = imu_data.linear_acceleration_covariance(i);
-                }
-            }
-
-            if (rclcpp::ok()) {
+                auto result = std::make_shared<ActionType::Result>();
                 result->imu = imu;
                 goal_handle_->succeed(result);
+
+                auto feedback_msg = std::make_shared<IMUFeedback>();
                 feedback_msg->status = RRActionStatusE::ACTION_STATE_SUCCESS;
                 goal_handle_->publish_feedback(feedback_msg);
+
+                is_executing_ = false;
 
                 // Signal completion to unblock execute() timeout wait
                 try {
@@ -187,6 +183,7 @@ namespace rr_common_plugins
 
             // Create UInt8MultiArray
             std_msgs::msg::UInt8MultiArray msg;
+            serialized_data.push_back(TERM_CHAR);
             msg.data.resize(serialized_data.size());
             std::memcpy(msg.data.data(), serialized_data.data(), serialized_data.size());
 
@@ -358,6 +355,64 @@ namespace rr_common_plugins
             is_cancelling_ = false;
 
             return CallbackReturn::SUCCESS;
+        }
+
+        void ImuActionSerialPlugin::abort_goal_with_error(RRActionStatusE status)
+        {
+            const std::lock_guard<std::mutex> lock(g_i_mutex_);
+
+            if (!goal_handle_ || !is_executing_) {
+                return;
+            }
+
+            auto result = std::make_shared<ActionType::Result>();
+            result->success = false;
+
+            auto feedback = std::make_shared<IMUFeedback>();
+            feedback->status = status;
+
+            goal_handle_->publish_feedback(feedback);
+            goal_handle_->abort(result);
+            is_executing_ = false;
+        }
+
+        sensor_msgs::msg::Imu ImuActionSerialPlugin::build_imu_message_from_data(
+            const org::ryderrobots::ros2::serial::MspRawImu& imu_data)
+        {
+            rclcpp::Clock clock(RCL_ROS_TIME);
+            sensor_msgs::msg::Imu imu;
+            imu.header.frame_id = rr_constants::LINK_IMU;
+            imu.header.stamp = clock.now();
+
+            if (imu_data.has_orientation()) {
+                imu.orientation.x = imu_data.orientation().x();
+                imu.orientation.y = imu_data.orientation().y();
+                imu.orientation.z = imu_data.orientation().z();
+                imu.orientation.w = imu_data.orientation().w();
+                for (int i = 0; i < imu_data.orientation_covariance_size(); i++) {
+                    imu.orientation_covariance[i] = imu_data.orientation_covariance(i);
+                }
+            }
+
+            if (imu_data.has_angular_velocity()) {
+                imu.angular_velocity.x = imu_data.angular_velocity().x();
+                imu.angular_velocity.y = imu_data.angular_velocity().y();
+                imu.angular_velocity.z = imu_data.angular_velocity().z();
+                for (int i = 0; i < imu_data.angular_velocity_covariance_size(); i++) {
+                    imu.angular_velocity_covariance[i] = imu_data.angular_velocity_covariance(i);
+                }
+            }
+
+            if (imu_data.has_linear_acceleration()) {
+                imu.linear_acceleration.x = imu_data.linear_acceleration().x();
+                imu.linear_acceleration.y = imu_data.linear_acceleration().y();
+                imu.linear_acceleration.z = imu_data.linear_acceleration().z();
+                for (int i = 0; i < imu_data.linear_acceleration_covariance_size(); i++) {
+                    imu.linear_acceleration_covariance[i] = imu_data.linear_acceleration_covariance(i);
+                }
+            }
+
+            return imu;
         }
 
     } // namespace rr_serial_plugins

@@ -117,5 +117,14 @@ ament_export_targets(
   export_${PROJECT_NAME}
 )
 
+# Activated when the following is called 
+# colcon build --cmake-args -DCMAKE_BUILD_TYPE=Debug
+# It creates a standalone node, that configures itself
+# and can be used to debug the plugins
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_executable(imu_action_serial_debug_node src/debug/imu_action_serial_debug_node.cpp)
+  target_link_libraries(imu_action_serial_debug_node PUBLIC rr_common_plugins)
+endif()
+
 pluginlib_export_plugin_description_file(rr_common_base plugins.xml)
 ament_package()

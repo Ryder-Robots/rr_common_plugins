@@ -54,6 +54,7 @@ namespace rr_common_plugins
             using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
             using UInt8MultiArray = std_msgs::msg::UInt8MultiArray;
             using State = rclcpp_lifecycle::State;
+            using RRActionStatusE = rr_constants::rr_action_status_t;
 
           private:
             // current transaction UUID
@@ -68,6 +69,9 @@ namespace rr_common_plugins
             // internal methods, note these are the methods that will do the work.
             void subscriber_cb(const UInt8MultiArray::UniquePtr &packet);
             void execute(const std::shared_ptr<GoalHandle> goal_handle);
+            void abort_goal_with_error(RRActionStatusE status);
+            sensor_msgs::msg::Imu build_imu_message_from_data(
+                const org::ryderrobots::ros2::serial::MspRawImu& imu_data);
 
             const std::string WRITE_TOPIC_ = "/serial_write";
             const std::string READ_TOPIC_ = "/serial_read";
@@ -78,6 +82,9 @@ namespace rr_common_plugins
             bool is_executing_ = false;
             bool is_cancelling_ = false;
             rclcpp::Logger logger_ = rclcpp::get_logger("ImuActionSerialPlugin");
+            std::string buffer_ = "";
+
+            const uint8_t TERM_CHAR = 0x1E;
 
           public:
             ImuActionSerialPlugin() : execution_thread_() {}

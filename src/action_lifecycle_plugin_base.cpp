@@ -28,6 +28,7 @@ using LifecyclePublisher = rclcpp_lifecycle::LifecyclePublisher<UInt8MultiArray>
 using Subscription = rclcpp::Subscription<UInt8MultiArray>;
 using RRActionStatusE = rr_constants::rr_action_status_t;
 using SerialResponse = org::ryderrobots::ros2::serial::Response;
+using SerialRequest = org::ryderrobots::ros2::serial::Request;
 
 namespace rr_common_plugins
 {
@@ -59,28 +60,83 @@ namespace rr_common_plugins
         return CallbackReturn::SUCCESS;
     }
 
+    CallbackReturn RRActionPluginBase::on_activate(const State &state)
+    {
+        (void)state;
+        // clear the buffer for safety
+        set_status(RRActionStatusE::ACTION_STATE_PREPARING);
+        publisher_->on_activate();
+        return CallbackReturn::SUCCESS;
+    }
+
+    CallbackReturn RRActionPluginBase::on_deactivate(const State &state)
+    {
+        (void)state;
+        set_status(RRActionStatusE::ACTION_STATE_PREPARING);
+        subscription_ = nullptr;
+        publisher_->on_deactivate();
+        return CallbackReturn::SUCCESS;
+    }
+
+    CallbackReturn RRActionPluginBase::on_cleanup(const State &state)
+    {
+        (void)state;
+        return CallbackReturn::SUCCESS;
+    }
+
     void RRActionPluginBase::set_status(RRActionStatusE status)
     {
+        const std::lock_guard<std::mutex> lock(*mutex_);
         status_ = status;
         buf_complete_ = true;
         buffer_.clear();
     }
 
+    RRActionStatusE RRActionPluginBase::get_status()
+    {
+        const std::lock_guard<std::mutex> lock(*mutex_);
+        return status_;
+    }
+
     void RRActionPluginBase::set_res(SerialResponse res)
     {
+        const std::lock_guard<std::mutex> lock(*mutex_);
         res_ = res;
         res_avail_ = true;
     }
 
     bool RRActionPluginBase::is_res_avail()
     {
+        const std::lock_guard<std::mutex> lock(*mutex_);
         return res_avail_;
     }
 
     SerialResponse RRActionPluginBase::get_res()
     {
+        const std::lock_guard<std::mutex> lock(*mutex_);
         res_avail_ = false;
         return res_;
+    }
+
+    bool RRActionPluginBase::publish(SerialRequest req)
+    {
+        
+        std::string serialized_data;
+        // done for safety
+        serialized_data.clear();
+        if (!req.SerializeToString(&serialized_data)) {
+            RCLCPP_ERROR(logger_, "Failed to serialize request");
+            set_status(RRActionStatusE::ACTION_STATE_FAIL);
+            return false;
+        }
+        serialized_data.push_back(TERM_CHAR);
+        UInt8MultiArray msg;
+        msg.data.resize(serialized_data.size());
+        std::memcpy(msg.data.data(), serialized_data.data(), serialized_data.size());
+
+        const std::lock_guard<std::mutex> lock(*mutex_);
+        publisher_->publish(msg);
+        return true;
     }
 
     void RRActionPluginBase::subscriber_cb(const UInt8MultiArray::UniquePtr &packet)

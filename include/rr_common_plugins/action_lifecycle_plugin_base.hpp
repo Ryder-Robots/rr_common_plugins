@@ -47,9 +47,10 @@ namespace rr_common_plugins
         using RRActionStatusE = rr_constants::rr_action_status_t;
         using RROpCodeE = rr_constants::rr_op_code_t;
         using SerialResponse = org::ryderrobots::ros2::serial::Response;
+        using SerialRequest = org::ryderrobots::ros2::serial::Request;
 
       public:
-        explicit RRActionPluginBase(RROpCodeE op_code) : op_code_(op_code) {}
+        explicit RRActionPluginBase(RROpCodeE op_code, std::shared_ptr<std::mutex> mutex) : op_code_(op_code), mutex_(mutex) {}
         ~RRActionPluginBase() = default;
 
         [[nodiscard]] CallbackReturn on_configure(const State &state, LifecycleNode::SharedPtr node);
@@ -64,9 +65,13 @@ namespace rr_common_plugins
 
         void set_status(RRActionStatusE status);
 
+        RRActionStatusE get_status();
+
         bool is_res_avail();
 
         SerialResponse get_res();
+
+        bool publish(SerialRequest req);
 
       private:
         Subscription::SharedPtr subscription_ = nullptr;
@@ -85,5 +90,7 @@ namespace rr_common_plugins
         RRActionStatusE status_ = RRActionStatusE::ACTION_STATE_PREPARING;
         RROpCodeE &op_code_;
         SerialResponse res_;
+
+        std::shared_ptr<std::mutex> mutex_;
     };
 } // namespace rr_common_plugins

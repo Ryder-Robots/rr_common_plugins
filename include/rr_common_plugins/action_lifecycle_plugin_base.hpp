@@ -88,7 +88,7 @@ namespace rr_common_plugins
         const uint8_t TERM_CHAR = 0x1E;
 
         RRActionStatusE status_ = RRActionStatusE::ACTION_STATE_PREPARING;
-        RROpCodeE &op_code_;
+        RROpCodeE op_code_;
         SerialResponse res_;
 
         std::shared_ptr<std::mutex> mutex_;

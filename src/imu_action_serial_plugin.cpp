@@ -80,6 +80,21 @@ namespace rr_common_plugins
             return imu;
         }
 
+        void ImuActionSerialPlugin::cancel_goal(std::shared_ptr<MonitorImuAction_Result> result_msg,
+            const std::shared_ptr<GoalHandle> goal_handle, std::shared_ptr<IMUFeedback> feedback_msg)
+        {
+            result_msg->success = false;
+            result_msg->uuid.uuid = uuid_;
+            goal_handle->canceled(result_msg);
+            {
+                const std::lock_guard<std::mutex> lock(*mutex_);
+                is_executing_ = false;
+            }
+            feedback_msg->status = action_plugin_base_.get_status();
+            goal_handle->publish_feedback(feedback_msg);
+        }
+
+        //TODO: Need a timeout period
         void ImuActionSerialPlugin::execute(const std::shared_ptr<GoalHandle> goal_handle)
         {
             std::shared_ptr<IMUFeedback> feedback_msg = std::make_shared<IMUFeedback>();
@@ -94,16 +109,26 @@ namespace rr_common_plugins
             monitor->set_is_request(true);
 
             if (!action_plugin_base_.publish(req)) {
-                result_msg->success = false;
-                result_msg->uuid.uuid = uuid_;
-                goal_handle->canceled(result_msg);
+                cancel_goal(result_msg, goal_handle, feedback_msg);
                 return;
             }
             action_plugin_base_.set_status(RRActionStatusE::ACTION_STATE_SENT);
 
-            // wait till result is available.
+            // Create an initial wall timer but disable it initally.
+            // Common IMU Hz is 104. Allow 100 Ns for a USB cable that is less than 15cm, with
+            // average processing time for a NanoBLE33
+            auto wait_period = std::chrono::nanoseconds((1000000000ULL / 100) + 100);
+            std::this_thread::sleep_for(wait_period);
+            while (!(action_plugin_base_.is_res_avail() || action_plugin_base_.get_status() == RRActionStatusE::ACTION_STATE_FAIL)) {
+                std::this_thread::sleep_for(wait_period);
+            }
 
             // if resp is recieved and successful, then populate IMU variables.
+            if (action_plugin_base_.get_status() == RRActionStatusE::ACTION_STATE_FAIL) {
+                cancel_goal(result_msg, goal_handle, feedback_msg);
+                return;
+            }
+            // Imu imu = build_imu_message_from_data();
 
             const std::lock_guard<std::mutex> lock(*mutex_);
             is_executing_ = false;

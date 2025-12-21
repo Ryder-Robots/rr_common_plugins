@@ -60,6 +60,8 @@ namespace rr_common_plugins
             using CancelResponse = rclcpp_action::CancelResponse;
             using Imu = sensor_msgs::msg::Imu;
             using MspRawImu = org::ryderrobots::ros2::serial::MspRawImu;
+            using MonitorImuAction_Result = rr_interfaces::action::MonitorImuAction_Result;
+            using IMUFeedback = rr_interfaces::action::MonitorImuAction_Feedback;
 
           public:
             ImuActionSerialPlugin() : execution_thread_(),
@@ -145,6 +147,9 @@ namespace rr_common_plugins
 
             void execute(const std::shared_ptr<GoalHandle> goal_handle);
             Imu build_imu_message_from_data(const MspRawImu &imu_data);
+            void check_available();
+
+            void cancel_goal(std::shared_ptr<MonitorImuAction_Result> res, const std::shared_ptr<GoalHandle> goal_handle, std::shared_ptr<IMUFeedback> feedback_msg);
         };
     } // namespace rr_serial_plugins
 } // namespace rr_common_plugins

@@ -29,6 +29,70 @@ namespace rr_common_plugins
         using State = rclcpp_lifecycle::State;
         using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
         using LifecycleNode = rclcpp_lifecycle::LifecycleNode;
+        using GoalResponse = rclcpp_action::GoalResponse;
+        using GoalUUID = rclcpp_action::GoalUUID;
+        using ActionType = rr_interfaces::action::MonitorImuAction;
+        using CancelResponse = rclcpp_action::CancelResponse;
+
+        void ImuActionSerialPlugin::execute(const std::shared_ptr<GoalHandle> goal_handle)
+        {
+            
+        }
+
+        GoalResponse ImuActionSerialPlugin::handle_goal(const GoalUUID &uuid, std::shared_ptr<const typename ActionType::Goal> goal)
+        {
+            (void)uuid;
+            (void)goal;
+            {
+                const std::lock_guard<std::mutex> lock(*mutex_);
+                if (is_executing_) {
+                    RCLCPP_WARN(logger_, "resource is busy with last request, rejecting new request.");
+                    return GoalResponse::REJECT;
+                }
+                is_executing_ = true;
+                is_cancelling_ = false;
+            }
+
+            // thread should be joinable at this point.
+            if (execution_thread_.joinable()) {
+                execution_thread_.join();
+            }
+            return GoalResponse::ACCEPT_AND_EXECUTE;
+        }
+
+        // set cancel to true, this should trigger thread to be joinable.
+        CancelResponse ImuActionSerialPlugin::handle_cancel(const std::shared_ptr<GoalHandle> goal_handle)
+        {
+            const std::lock_guard<std::mutex> lock(*mutex_);
+
+            if (!goal_handle || is_cancelling_ || !is_executing_) {
+                RCLCPP_WARN(logger_, "thread completed or already cancelled");
+                return CancelResponse::REJECT;
+            }
+
+            if (goal_handle->is_executing()) {
+                is_cancelling_ = true;
+            }
+            return CancelResponse::ACCEPT;
+        }
+
+        void ImuActionSerialPlugin::handle_accepted(const std::shared_ptr<GoalHandle> goal_handle)
+        {
+            if (execution_thread_.joinable()) {
+                execution_thread_.join();
+            }
+            {
+                const std::lock_guard<std::mutex> lock(*mutex_);
+                is_cancelling_ = false;
+                is_executing_ = true;
+
+                // move assignment for safety.
+                execution_thread_ = std::thread();
+                // publish request then this needs to be done be done in thread.
+                auto execute_in_thread = [this, goal_handle]() { return this->execute(goal_handle); };
+                execution_thread_ = std::thread(execute_in_thread);
+            }
+        }
 
         CallbackReturn ImuActionSerialPlugin::on_configure(const State &state, LifecycleNode::SharedPtr node)
         {
@@ -349,11 +413,7 @@ PLUGINLIB_EXPORT_CLASS(rr_common_plugins::rr_serial_plugins::ImuActionSerialPlug
 //         execution_thread_.join();
 //     }
 
-//     // move assignment for safety.
-//     execution_thread_ = std::thread();
-//     // publish request then this needs to be done be done in thread.
-//     auto execute_in_thread = [this, goal_handle]() { return this->execute(goal_handle); };
-//     execution_thread_ = std::thread(execute_in_thread);
+
 // }
 
 // CallbackReturn ImuActionSerialPlugin::on_activate(const State &state)

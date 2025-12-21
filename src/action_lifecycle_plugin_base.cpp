@@ -29,6 +29,7 @@ using Subscription = rclcpp::Subscription<UInt8MultiArray>;
 using RRActionStatusE = rr_constants::rr_action_status_t;
 using SerialResponse = org::ryderrobots::ros2::serial::Response;
 using SerialRequest = org::ryderrobots::ros2::serial::Request;
+using Time = builtin_interfaces::msg::Time;
 
 namespace rr_common_plugins
 {
@@ -37,6 +38,8 @@ namespace rr_common_plugins
         (void)state;
         auto topic_names_and_types = node->get_topic_names_and_types();
         auto found = false;
+        timestamp_ = clock_.now();
+
         for (std::string t : {"/serial_read", "/serial_write"}) {
             for (const auto &[topic_name, type_list] : topic_names_and_types) {
                 if (topic_name == t) {
@@ -101,8 +104,15 @@ namespace rr_common_plugins
     void RRActionPluginBase::set_res(SerialResponse res)
     {
         const std::lock_guard<std::mutex> lock(*mutex_);
+        timestamp_ = clock_.now();
         res_ = res;
         res_avail_ = true;
+    }
+
+    Time RRActionPluginBase::get_time_stamp()
+    {
+        const std::lock_guard<std::mutex> lock(*mutex_);
+        return timestamp_;
     }
 
     bool RRActionPluginBase::is_res_avail()

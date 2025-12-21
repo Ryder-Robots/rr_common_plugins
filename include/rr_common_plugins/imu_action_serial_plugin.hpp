@@ -22,6 +22,7 @@
 
 #include "rr_common_base/rr_constants.hpp"
 #include "rr_common_base/rr_imu_action_plugin_iface.hpp"
+#include "rr_common_plugins/action_lifecycle_plugin_base.hpp"
 #include "rr_common_plugins/generated/rr_serial.pb.h"
 #include "rr_common_plugins/visibility_control.h"
 #include "rr_interfaces/action/monitor_imu_action.hpp"
@@ -31,7 +32,6 @@
 #include <sensor_msgs/msg/imu.hpp>
 #include <std_msgs/msg/u_int8_multi_array.hpp>
 #include <sys/stat.h>
-#include "rr_common_plugins/action_lifecycle_plugin_base.hpp"
 
 
 namespace rr_common_plugins
@@ -54,14 +54,56 @@ namespace rr_common_plugins
             using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
             using LifecycleNode = rclcpp_lifecycle::LifecycleNode;
             using RROpCodeE = rr_constants::rr_op_code_t;
+            using GoalResponse = rclcpp_action::GoalResponse;
+            using GoalUUID = rclcpp_action::GoalUUID;
+            using ActionType = rr_interfaces::action::MonitorImuAction;
+            using CancelResponse = rclcpp_action::CancelResponse;
 
           public:
+            ImuActionSerialPlugin() : execution_thread_(),
+                                      mutex_(std::make_shared<std::mutex>()),
+                                      action_plugin_base_(RROpCodeE::MSP_RAW_IMU, mutex_) {}
 
-            ImuActionSerialPlugin() : 
-              execution_thread_(), 
-              mutex_(std::make_shared<std::mutex>()),
-              action_plugin_base_(RROpCodeE::MSP_RAW_IMU, mutex_) {}
+            /**
+             * @fn handle_goal
+             * @brief returns availability of the requested goal.
+             *
+             * Stores UUID and Goal reference for later use.
+             *
+             * @param uuid unique identified provided by ROS2 middleware, note that this retained as part of the return message and should be
+             * used in bagging services, along with stamp to trace results.
+             * @param goal raw goal, will be assessed in this method to ensure that it has all required information for action, if it does then ACCEPT_AND_EXECUTE
+             * or ACCEPT_AND_DEFER will be returned under the conditions described in detail in the function description.
+             * @return GoalResponse, this is described in detail in function description.
+             */
+            [[nodiscard]] GoalResponse handle_goal(const GoalUUID &uuid, std::shared_ptr<const typename ActionType::Goal> goal) override;
 
+
+            /**
+             * @fn handle_cancel
+             * @brief cancellation may occur when lifecycle node decides that timeout period has been reached, after node returns
+             * ACCEPT_AND_DEFER, and USB has not come alive. In this case current action will be cancelled, and all consequent
+             * actions requests will return REJECT.
+             * @brief goal_handle, pointer to goal information.
+             * @return Always return ACCEPT
+             */
+            [[nodiscard]] CancelResponse handle_cancel(const std::shared_ptr<GoalHandle> goal_handle) override;
+
+
+            /**
+             * @fn handle_accepted
+             * @brief when handle_goal returns ACCEPT_AND_EXECUTE, then this method will be executed in its own thread.
+             *
+             * Submits IMU monitor request to /serial_write, feedback will then be immediately set to 'send', it will remain in this
+             * state until Arduino returns serial response on /serial_read that corresponds IMU response. After this, status will be set
+             * to 'processing' and method will map protobuf response to ROS2 message format for IMU,  note that calculations for quadratics
+             * will be performed on the micro-processor itself, and not as part of this routine.
+             *
+             * After mapping a final result will be set, and action should be considered complete.
+             */
+            void handle_accepted(const std::shared_ptr<GoalHandle> goal_handle) override;
+
+            // Lifecycle actions,  these are common.
             /**
              * @fn on_configure
              * @brief called by action concrete implementation during configure phase of its lifecycle.
@@ -91,9 +133,14 @@ namespace rr_common_plugins
             [[nodiscard]] CallbackReturn on_cleanup(const State &state) override;
 
           private:
+            bool is_executing_ = false;
+            bool is_cancelling_ = false;
             std::thread execution_thread_;
             std::shared_ptr<std::mutex> mutex_;
             rr_common_plugins::RRActionPluginBase action_plugin_base_;
+            rclcpp::Logger logger_ = rclcpp::get_logger("ImuActionSerialPlugin");
+
+            void execute(const std::shared_ptr<GoalHandle> goal_handle);
         };
     } // namespace rr_serial_plugins
 } // namespace rr_common_plugins
@@ -118,7 +165,7 @@ namespace rr_common_plugins
 
 // //     // internal methods, note these are the methods that will do the work.
 // //     void subscriber_cb(const UInt8MultiArray::UniquePtr &packet);
-// //     void execute(const std::shared_ptr<GoalHandle> goal_handle);
+// //    
 // //     void abort_goal_with_error(RRActionStatusE status);
 // //     sensor_msgs::msg::Imu build_imu_message_from_data(
 // //         const org::ryderrobots::ros2::serial::MspRawImu& imu_data);
@@ -139,44 +186,3 @@ namespace rr_common_plugins
 //   public:
 //     ImuActionSerialPlugin() : execution_thread_() {}
 //     ~ImuActionSerialPlugin();
-
-
-//     /**
-//      * @fn handle_goal
-//      * @brief returns availability of the requested goal.
-//      *
-//      * Stores UUID and Goal reference for later use.
-//      *
-//      * @param uuid unique identified provided by ROS2 middleware, note that this retained as part of the return message and should be
-//      * used in bagging services, along with stamp to trace results.
-//      * @param goal raw goal, will be assessed in this method to ensure that it has all required information for action, if it does then ACCEPT_AND_EXECUTE
-//      * or ACCEPT_AND_DEFER will be returned under the conditions described in detail in the function description.
-//      * @return GoalResponse, this is described in detail in function description.
-//      */
-//     [[nodiscard]] rclcpp_action::GoalResponse handle_goal(
-//         const rclcpp_action::GoalUUID &uuid,
-//         std::shared_ptr<const typename ActionType::Goal> goal) override;
-
-//     /**
-//      * @fn handle_cancel
-//      * @brief cancellation may occur when lifecycle node decides that timeout period has been reached, after node returns
-//      * ACCEPT_AND_DEFER, and USB has not come alive. In this case current action will be cancelled, and all consequent
-//      * actions requests will return REJECT.
-//      * @brief goal_handle, pointer to goal information.
-//      * @return Always return ACCEPT
-//      */
-//     [[nodiscard]] rclcpp_action::CancelResponse handle_cancel(
-//         const std::shared_ptr<GoalHandle> goal_handle) override;
-//     /**
-//      * @fn handle_accepted
-//      * @brief when handle_goal returns ACCEPT_AND_EXECUTE, then this method will be executed in its own thread.
-//      *
-//      * Submits IMU monitor request to /serial_write, feedback will then be immediately set to 'send', it will remain in this
-//      * state until Arduino returns serial response on /serial_read that corresponds IMU response. After this, status will be set
-//      * to 'processing' and method will map protobuf response to ROS2 message format for IMU,  note that calculations for quadratics
-//      * will be performed on the micro-processor itself, and not as part of this routine.
-//      *
-//      * After mapping a final result will be set, and action should be considered complete.
-//      */
-//     void handle_accepted(
-//         const std::shared_ptr<GoalHandle> goal_handle) override;

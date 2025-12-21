@@ -48,6 +48,7 @@ namespace rr_common_plugins
         using RROpCodeE = rr_constants::rr_op_code_t;
         using SerialResponse = org::ryderrobots::ros2::serial::Response;
         using SerialRequest = org::ryderrobots::ros2::serial::Request;
+        using Time = builtin_interfaces::msg::Time;
 
       public:
         explicit RRActionPluginBase(RROpCodeE op_code, std::shared_ptr<std::mutex> mutex) : op_code_(op_code), mutex_(mutex) {}
@@ -73,6 +74,8 @@ namespace rr_common_plugins
 
         bool publish(SerialRequest req);
 
+        Time get_time_stamp();
+
       private:
         Subscription::SharedPtr subscription_ = nullptr;
         const std::string WRITE_TOPIC_ = "/serial_write";
@@ -90,6 +93,8 @@ namespace rr_common_plugins
         RRActionStatusE status_ = RRActionStatusE::ACTION_STATE_PREPARING;
         RROpCodeE op_code_;
         SerialResponse res_;
+        Time timestamp_;
+        rclcpp::Clock clock_ = rclcpp::Clock(RCL_ROS_TIME);
 
         std::shared_ptr<std::mutex> mutex_;
     };

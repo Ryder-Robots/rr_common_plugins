@@ -58,6 +58,8 @@ namespace rr_common_plugins
             using GoalUUID = rclcpp_action::GoalUUID;
             using ActionType = rr_interfaces::action::MonitorImuAction;
             using CancelResponse = rclcpp_action::CancelResponse;
+            using Imu = sensor_msgs::msg::Imu;
+            using MspRawImu = org::ryderrobots::ros2::serial::MspRawImu;
 
           public:
             ImuActionSerialPlugin() : execution_thread_(),
@@ -139,50 +141,10 @@ namespace rr_common_plugins
             std::shared_ptr<std::mutex> mutex_;
             rr_common_plugins::RRActionPluginBase action_plugin_base_;
             rclcpp::Logger logger_ = rclcpp::get_logger("ImuActionSerialPlugin");
+            GoalUUID uuid_;
 
             void execute(const std::shared_ptr<GoalHandle> goal_handle);
+            Imu build_imu_message_from_data(const MspRawImu &imu_data);
         };
     } // namespace rr_serial_plugins
 } // namespace rr_common_plugins
-
-
-// //     using ActionType = rr_interfaces::action::MonitorImuAction;
-// //     using GoalHandle = rclcpp_action::ServerGoalHandle<ActionType>;
-// //
-// //     using UInt8MultiArray = std_msgs::msg::UInt8MultiArray;
-// //     using State = rclcpp_lifecycle::State;
-// //     using RRActionStatusE = rr_constants::rr_action_status_t;
-
-// //   private:
-// //     // current transaction UUID
-// //     std::shared_ptr<GoalHandle> goal_handle_ = nullptr;
-// //     std::promise<void> response_promise_;
-// //     std::future<void> response_future_;
-
-// //     rclcpp::Subscription<UInt8MultiArray>::SharedPtr subscription_ = nullptr;
-// //     rclcpp_lifecycle::LifecyclePublisher<UInt8MultiArray>::SharedPtr publisher_ = nullptr;
-
-
-// //     // internal methods, note these are the methods that will do the work.
-// //     void subscriber_cb(const UInt8MultiArray::UniquePtr &packet);
-// //    
-// //     void abort_goal_with_error(RRActionStatusE status);
-// //     sensor_msgs::msg::Imu build_imu_message_from_data(
-// //         const org::ryderrobots::ros2::serial::MspRawImu& imu_data);
-
-// //     const std::string WRITE_TOPIC_ = "/serial_write";
-// //     const std::string READ_TOPIC_ = "/serial_read";
-
-// //     // standard mutex to help with threading.
-// //     std::thread execution_thread_;
-// //     std::mutex g_i_mutex_;
-// //     bool is_executing_ = false;
-// //     bool is_cancelling_ = false;
-// //     rclcpp::Logger logger_ = rclcpp::get_logger("ImuActionSerialPlugin");
-// //     std::string buffer_ = "";
-
-// //     const uint8_t TERM_CHAR = 0x1E;
-
-//   public:
-//     ImuActionSerialPlugin() : execution_thread_() {}
-//     ~ImuActionSerialPlugin();

@@ -193,7 +193,8 @@ namespace rr_common_plugins
             goal_handle->publish_feedback(feedback_msg);
 
             // NOW wait for response (only once, only after publishing)
-            auto timeout = std::chrono::seconds(5);
+            //DEBUG code auto timeout = std::chrono::seconds(5);
+            auto timeout = std::chrono::seconds(500);
             auto status = response_future_.wait_for(timeout);
             {
                 const std::lock_guard<std::mutex> lock(g_i_mutex_);
@@ -256,6 +257,12 @@ namespace rr_common_plugins
             (void)goal;
             {
                 const std::lock_guard<std::mutex> lock(g_i_mutex_);
+
+                // reset is_executing.
+                if (goal_handle_ && !goal_handle_->is_executing()) {
+                    is_executing_ = false;
+                }
+
                 if (is_executing_) {
                     // Resource busy.
                     RCLCPP_WARN(logger_, "resource is busy with last request, rejecting new request.");

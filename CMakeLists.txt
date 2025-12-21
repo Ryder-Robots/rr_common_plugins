@@ -50,6 +50,7 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
 add_library(rr_common_plugins
   src/joy_subscriber_udp_plugin.cpp
   src/imu_action_serial_plugin.cpp
+  src/action_lifecycle_plugin_base.cpp
   ${PROTO_SRCS}
   ${PROTO_HDRS})
 
@@ -85,6 +86,33 @@ install(
   DIRECTORY include/ ${CMAKE_CURRENT_SOURCE_DIR}/include
   DESTINATION include/${PROJECT_NAME}
 )
+
+target_compile_definitions(rr_common_plugins PRIVATE
+  $<$<CONFIG:Debug>:RR_COMMON_PLUGINS_DEBUG>
+  $<$<CONFIG:Release>:RR_COMMON_PLUGINS_RELEASE>
+)
+
+# Build debug node only in Debug mode
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  message(STATUS "Building imu_action_serial_debug_node (Debug mode)")
+
+  add_executable(imu_action_serial_debug_node
+    src/debug/imu_action_serial_debug_node.cpp
+  )
+
+  target_link_libraries(imu_action_serial_debug_node
+    rr_common_plugins
+  )
+
+  target_compile_definitions(imu_action_serial_debug_node PRIVATE
+    RR_COMMON_PLUGINS_DEBUG
+  )
+
+  install(TARGETS imu_action_serial_debug_node
+    DESTINATION lib/${PROJECT_NAME}
+  )
+endif()
+
 install(
   TARGETS rr_common_plugins
   EXPORT export_${PROJECT_NAME}
@@ -106,25 +134,6 @@ if(BUILD_TESTING)
   add_subdirectory(test)
 endif()
 
-ament_export_include_directories(
-  "include/${PROJECT_NAME}"
-  "include/${PROJECT_NAME}/generated"
-)
-ament_export_libraries(
-  rr_common_plugins
-)
-ament_export_targets(
-  export_${PROJECT_NAME}
-)
-
-# Activated when the following is called 
-# colcon build --cmake-args -DCMAKE_BUILD_TYPE=Debug
-# It creates a standalone node, that configures itself
-# and can be used to debug the plugins
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  add_executable(imu_action_serial_debug_node src/debug/imu_action_serial_debug_node.cpp)
-  target_link_libraries(imu_action_serial_debug_node PUBLIC rr_common_plugins)
-endif()
 
 pluginlib_export_plugin_description_file(rr_common_base plugins.xml)
 ament_package()

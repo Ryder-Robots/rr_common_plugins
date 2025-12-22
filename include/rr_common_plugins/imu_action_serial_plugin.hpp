@@ -32,6 +32,7 @@
 #include <sensor_msgs/msg/imu.hpp>
 #include <std_msgs/msg/u_int8_multi_array.hpp>
 #include <sys/stat.h>
+#include <algorithm>
 
 
 namespace rr_common_plugins
@@ -137,6 +138,10 @@ namespace rr_common_plugins
             [[nodiscard]] CallbackReturn on_cleanup(const State &state) override;
 
           private:
+            static constexpr uint64_t IMU_HZ = 100;
+            static constexpr uint64_t USB_OVERHEAD_NS = 100;
+            static constexpr int MAX_CONV_ARR_SZ = 9;
+
             bool is_executing_ = false;
             bool is_cancelling_ = false;
             std::thread execution_thread_;

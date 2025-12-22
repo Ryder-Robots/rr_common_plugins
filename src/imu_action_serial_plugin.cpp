@@ -54,7 +54,7 @@ namespace rr_common_plugins
                 imu.orientation.y = imu_data.orientation().y();
                 imu.orientation.z = imu_data.orientation().z();
                 imu.orientation.w = imu_data.orientation().w();
-                for (int i = 0; i < imu_data.orientation_covariance_size(); i++) {
+                for (int i = 0; i < std::min(MAX_CONV_ARR_SZ, imu_data.orientation_covariance_size()); i++) {
                     imu.orientation_covariance[i] = imu_data.orientation_covariance(i);
                 }
             }
@@ -63,7 +63,7 @@ namespace rr_common_plugins
                 imu.angular_velocity.x = imu_data.angular_velocity().x();
                 imu.angular_velocity.y = imu_data.angular_velocity().y();
                 imu.angular_velocity.z = imu_data.angular_velocity().z();
-                for (int i = 0; i < imu_data.angular_velocity_covariance_size(); i++) {
+                for (int i = 0; i < std::min(MAX_CONV_ARR_SZ, imu_data.angular_velocity_covariance_size()); i++) {
                     imu.angular_velocity_covariance[i] = imu_data.angular_velocity_covariance(i);
                 }
             }
@@ -72,7 +72,7 @@ namespace rr_common_plugins
                 imu.linear_acceleration.x = imu_data.linear_acceleration().x();
                 imu.linear_acceleration.y = imu_data.linear_acceleration().y();
                 imu.linear_acceleration.z = imu_data.linear_acceleration().z();
-                for (int i = 0; i < imu_data.linear_acceleration_covariance_size(); i++) {
+                for (int i = 0; i < std::min(MAX_CONV_ARR_SZ, imu_data.linear_acceleration_covariance_size()); i++) {
                     imu.linear_acceleration_covariance[i] = imu_data.linear_acceleration_covariance(i);
                 }
             }
@@ -94,7 +94,6 @@ namespace rr_common_plugins
             goal_handle->publish_feedback(feedback_msg);
         }
 
-        //TODO: Need a timeout period
         void ImuActionSerialPlugin::execute(const std::shared_ptr<GoalHandle> goal_handle)
         {
             std::shared_ptr<IMUFeedback> feedback_msg = std::make_shared<IMUFeedback>();
@@ -114,25 +113,36 @@ namespace rr_common_plugins
             }
             action_plugin_base_.set_status(RRActionStatusE::ACTION_STATE_SENT);
 
-            // Create an initial wall timer but disable it initally.
+            // Create an initial wall timer but disable it initially.
             // Common IMU Hz is 104. Allow 100 Ns for a USB cable that is less than 15cm, with
             // average processing time for a NanoBLE33
-            rclcpp::Clock clock(RCL_SYSTEM_TIME); 
-            auto wait_period = std::chrono::nanoseconds((1000000000ULL / 100) + 100);
-            auto start_period = clock.now();
+            rclcpp::Clock clock(RCL_SYSTEM_TIME);
+            auto wait_period = std::chrono::nanoseconds((1000000000ULL / IMU_HZ) + USB_OVERHEAD_NS);
+            auto start_time = clock.now();
+            bool is_cancelled = false;
+
+            // Currently sleep_for is used instead of promise or other conditional, promises seemed
+            // to be causing some sort of errors in ROS's RMW layer. This may of been implentation issues
+            // and probally is, but for now sleep will be used until it can be further tested.
             std::this_thread::sleep_for(wait_period);
             while (!(action_plugin_base_.is_res_avail() || action_plugin_base_.get_status() == RRActionStatusE::ACTION_STATE_FAIL)) {
                 std::this_thread::sleep_for(wait_period);
-                rclcpp::Duration delta = clock.now() - start_period;
+                rclcpp::Duration delta = clock.now() - start_time;
 
-                if (delta.seconds() > timeout_period_) {
-                    RCLCPP_ERROR(logger_, "timeout error");
+                {
+                    const std::lock_guard<std::mutex> lock(*mutex_);
+                    is_cancelled = is_cancelling_;
+                }
+
+                if (delta.seconds() > timeout_period_ || is_cancelled) {
+                    RCLCPP_ERROR(logger_, "timeout/cancellation error");
                     action_plugin_base_.set_status(RRActionStatusE::ACTION_STATE_TIMEOUT);
                     cancel_goal(result_msg, goal_handle, feedback_msg);
+                    return;
                 }
             }
 
-            // if resp is recieved and successful, then populate IMU variables.
+            // if resp is received and successful, then populate IMU variables.
             if (action_plugin_base_.get_status() == RRActionStatusE::ACTION_STATE_FAIL) {
                 RCLCPP_ERROR(logger_, "serde failure");
                 cancel_goal(result_msg, goal_handle, feedback_msg);
@@ -151,13 +161,14 @@ namespace rr_common_plugins
                 RCLCPP_ERROR(logger_, "IMU data not set");
                 action_plugin_base_.set_status(RRActionStatusE::ACTION_STATE_FAIL);
                 cancel_goal(result_msg, goal_handle, feedback_msg);
-                return;            
+                return;
             }
 
             Imu imu = build_imu_message_from_data(result.msp_raw_imu());
             result_msg->imu = imu;
             result_msg->success = true;
             goal_handle->succeed(result_msg);
+            const std::lock_guard<std::mutex> lock(*mutex_);
             is_executing_ = false;
         }
 
@@ -172,10 +183,10 @@ namespace rr_common_plugins
                 }
                 is_executing_ = true;
                 is_cancelling_ = false;
+                // set UUID after check, if it gets rejected, then we want the UUID that is getting used
+                // here.
+                uuid_ = uuid;
             }
-            // set UUID after check, if it gets rejected, then we want the UUID that is getting used
-            // here.
-            uuid_ = uuid;
 
             // thread should be joinable at this point.
             if (execution_thread_.joinable()) {
@@ -202,20 +213,14 @@ namespace rr_common_plugins
 
         void ImuActionSerialPlugin::handle_accepted(const std::shared_ptr<GoalHandle> goal_handle)
         {
-            if (execution_thread_.joinable()) {
-                execution_thread_.join();
-            }
             {
                 const std::lock_guard<std::mutex> lock(*mutex_);
                 is_cancelling_ = false;
-                is_executing_ = true;
-
-                // move assignment for safety.
-                execution_thread_ = std::thread();
-                // publish request then this needs to be done be done in thread.
-                auto execute_in_thread = [this, goal_handle]() { return this->execute(goal_handle); };
-                execution_thread_ = std::thread(execute_in_thread);
             }
+
+            // publish request then this needs to be done in thread.
+            auto execute_in_thread = [this, goal_handle]() { return this->execute(goal_handle); };
+            execution_thread_ = std::thread(execute_in_thread);
         }
 
         // Lifecycle is handled by the lifecycle manager.

@@ -155,7 +155,6 @@ namespace rr_common_plugins
         GoalResponse ImuActionSerialPlugin::handle_goal(const GoalUUID &uuid, std::shared_ptr<const typename ActionType::Goal> goal)
         {
             (void)goal;
-            uuid_ = uuid;
             {
                 const std::lock_guard<std::mutex> lock(*mutex_);
                 if (is_executing_) {
@@ -165,6 +164,9 @@ namespace rr_common_plugins
                 is_executing_ = true;
                 is_cancelling_ = false;
             }
+            // set UUID after check, if it gets rejected, then we want the UUID that is getting used
+            // here.
+            uuid_ = uuid;
 
             // thread should be joinable at this point.
             if (execution_thread_.joinable()) {

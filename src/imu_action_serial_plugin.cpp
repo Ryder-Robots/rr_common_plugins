@@ -117,10 +117,19 @@ namespace rr_common_plugins
             // Create an initial wall timer but disable it initally.
             // Common IMU Hz is 104. Allow 100 Ns for a USB cable that is less than 15cm, with
             // average processing time for a NanoBLE33
+            rclcpp::Clock clock(RCL_SYSTEM_TIME); 
             auto wait_period = std::chrono::nanoseconds((1000000000ULL / 100) + 100);
+            auto start_period = clock.now();
             std::this_thread::sleep_for(wait_period);
             while (!(action_plugin_base_.is_res_avail() || action_plugin_base_.get_status() == RRActionStatusE::ACTION_STATE_FAIL)) {
                 std::this_thread::sleep_for(wait_period);
+                rclcpp::Duration delta = clock.now() - start_period;
+
+                if (delta.seconds() > timeout_period_) {
+                    RCLCPP_ERROR(logger_, "timeout error");
+                    action_plugin_base_.set_status(RRActionStatusE::ACTION_STATE_TIMEOUT);
+                    cancel_goal(result_msg, goal_handle, feedback_msg);
+                }
             }
 
             // if resp is recieved and successful, then populate IMU variables.
@@ -212,6 +221,9 @@ namespace rr_common_plugins
         // Lifecycle is handled by the lifecycle manager.
         CallbackReturn ImuActionSerialPlugin::on_configure(const State &state, LifecycleNode::SharedPtr node)
         {
+            node->declare_parameter("timeout_period", 10);
+
+            timeout_period_ = node->get_parameter("timeout_period").as_int();
             return action_plugin_base_.on_configure(state, node);
         }
 

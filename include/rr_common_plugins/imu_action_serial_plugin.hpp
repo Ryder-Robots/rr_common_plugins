@@ -144,10 +144,10 @@ namespace rr_common_plugins
             rr_common_plugins::RRActionPluginBase action_plugin_base_;
             rclcpp::Logger logger_ = rclcpp::get_logger("ImuActionSerialPlugin");
             GoalUUID uuid_;
+            uint32_t timeout_period_ = 10;
 
             void execute(const std::shared_ptr<GoalHandle> goal_handle);
             Imu build_imu_message_from_data(const MspRawImu &imu_data);
-            void check_available();
 
             void cancel_goal(std::shared_ptr<MonitorImuAction_Result> res, const std::shared_ptr<GoalHandle> goal_handle, std::shared_ptr<IMUFeedback> feedback_msg);
         };

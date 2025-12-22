@@ -342,9 +342,9 @@ TEST_F(TestImuActionSerialPlugin, thread_safety_mutex_protection)
     auto response1 = plugin->handle_goal(uuid1, goal1);
     EXPECT_EQ(response1, rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE);
 
-    // Without actually executing, we accept the next one (is_executing_ is false)
+    // Without actually executing, we accept the next one (is_executing_ is true)
     auto response2 = plugin->handle_goal(uuid2, goal2);
-    EXPECT_EQ(response2, rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE);
+    EXPECT_EQ(response2, rclcpp_action::GoalResponse::REJECT);
 }
 
 TEST_F(TestImuActionSerialPlugin, promise_future_mechanism_initialization)

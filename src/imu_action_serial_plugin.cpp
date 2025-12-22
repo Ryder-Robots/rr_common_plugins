@@ -125,12 +125,30 @@ namespace rr_common_plugins
 
             // if resp is recieved and successful, then populate IMU variables.
             if (action_plugin_base_.get_status() == RRActionStatusE::ACTION_STATE_FAIL) {
+                RCLCPP_ERROR(logger_, "serde failure");
                 cancel_goal(result_msg, goal_handle, feedback_msg);
                 return;
             }
-            // Imu imu = build_imu_message_from_data();
 
-            const std::lock_guard<std::mutex> lock(*mutex_);
+            if (!action_plugin_base_.is_res_avail()) {
+                RCLCPP_ERROR(logger_, "reported as successful but result not available");
+                action_plugin_base_.set_status(RRActionStatusE::ACTION_STATE_FAIL);
+                cancel_goal(result_msg, goal_handle, feedback_msg);
+                return;
+            }
+
+            auto result = action_plugin_base_.get_res();
+            if (!result.has_msp_raw_imu()) {
+                RCLCPP_ERROR(logger_, "IMU data not set");
+                action_plugin_base_.set_status(RRActionStatusE::ACTION_STATE_FAIL);
+                cancel_goal(result_msg, goal_handle, feedback_msg);
+                return;            
+            }
+
+            Imu imu = build_imu_message_from_data(result.msp_raw_imu());
+            result_msg->imu = imu;
+            result_msg->success = true;
+            goal_handle->succeed(result_msg);
             is_executing_ = false;
         }
 

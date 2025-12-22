@@ -80,8 +80,9 @@ namespace rr_common_plugins
         Subscription::SharedPtr subscription_ = nullptr;
         const std::string WRITE_TOPIC_ = "/serial_write";
         const std::string READ_TOPIC_ = "/serial_read";
-        rclcpp::Logger logger_ = rclcpp::get_logger("ImuActionSerialPlugin");
+        rclcpp::Logger logger_ = rclcpp::get_logger("ImuActionSerialPluginBase");
         void set_res(SerialResponse res);
+        void reset_buffer(RRActionStatusE status);
 
         void subscriber_cb(const UInt8MultiArray::UniquePtr &packet);
         bool buf_complete_ = false;

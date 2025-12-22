@@ -88,6 +88,7 @@ class RRSerialPluginsDebug : public rclcpp_lifecycle::LifecycleNode
  */
 int main(int argc, char *argv[])
 {
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
     rclcpp::init(argc, argv);
 
     auto node_lf = std::make_shared<RRSerialPluginsDebug>();

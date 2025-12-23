@@ -18,6 +18,46 @@ The plugins abstract away the plumbing required for these communication methods,
 
 Additional plugins will be added to this package as common communication patterns are identified.
 
+## Action State Machine
+
+All action plugins provided by this package follow a common state machine to track the progress of request/response communication. This standardized state flow ensures consistent behavior and predictable status reporting across all action types.
+
+### State Transitions
+
+```
+ACTION_STATE_PREPARING → ACTION_STATE_SENT → ACTION_STATE_PROCESSING → ACTION_STATE_SUCCESS
+                                                                      ↘
+                                                                        ACTION_STATE_FAIL
+```
+
+### State Descriptions
+
+| State | Description |
+|-------|-------------|
+| **ACTION_STATE_PREPARING** | Initial state. The action is preparing to send a request. Buffers are cleared and ready for new data. |
+| **ACTION_STATE_SENT** | Request has been serialized and published to the communication channel (e.g., `/serial_write`). Waiting for response. |
+| **ACTION_STATE_PROCESSING** | Response data is being received and processed. May involve assembling multi-packet messages or deserializing protobuf data. |
+| **ACTION_STATE_SUCCESS** | Request completed successfully. Response has been validated and is available for retrieval. |
+| **ACTION_STATE_FAIL** | Request failed. Possible causes: serialization error, deserialization error, timeout, or communication failure. |
+
+### Common Behavior
+
+- All action plugins in this package use the `RRActionPluginBase` class, which implements this state machine
+- States are thread-safe and can be queried at any time via `get_status()`
+- Feedback messages published during action execution include the current state
+- The state machine automatically handles:
+  - Buffer management between requests
+  - Protobuf serialization/deserialization
+  - Multi-packet message assembly
+  - Operation code filtering for response matching
+  - Timeout detection (when configured)
+
+This consistent state model makes it easier to:
+- Monitor action progress from client code
+- Debug communication issues by examining state transitions
+- Build reliable systems that handle failures gracefully
+- Implement timeout and retry logic at the application level
+
 
 ## Installation
 

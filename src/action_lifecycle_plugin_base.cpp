@@ -67,7 +67,7 @@ namespace rr_common_plugins
     {
         (void)state;
         // clear the buffer for safety
-        reset_buffer(RRActionStatusE::ACTION_STATE_PREPARING);
+        buf_complete(RRActionStatusE::ACTION_STATE_PREPARING);
         publisher_->on_activate();
         return CallbackReturn::SUCCESS;
     }
@@ -75,9 +75,14 @@ namespace rr_common_plugins
     CallbackReturn RRActionPluginBase::on_deactivate(const State &state)
     {
         (void)state;
-        reset_buffer(RRActionStatusE::ACTION_STATE_PREPARING);
-        subscription_ = nullptr;
+        const std::lock_guard<std::mutex> lock(*mutex_);
+        buf_complete_no_lock(RRActionStatusE::ACTION_STATE_PREPARING);
         publisher_->on_deactivate();
+        deactivate_ = true;
+
+        // sleep for 500 ms to allow for callback to complete.
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        subscription_ = nullptr;
         return CallbackReturn::SUCCESS;
     }
 
@@ -87,13 +92,18 @@ namespace rr_common_plugins
         return CallbackReturn::SUCCESS;
     }
 
-    void RRActionPluginBase::reset_buffer(RRActionStatusE status)
+    void RRActionPluginBase::buf_complete_no_lock(RRActionStatusE status)
     {
         RCLCPP_DEBUG(logger_, "cleared buffer");
-        const std::lock_guard<std::mutex> lock(*mutex_);
         status_ = status;
         buf_complete_ = true;
         buffer_.clear();
+    }
+
+    void RRActionPluginBase::buf_complete(RRActionStatusE status)
+    {
+        const std::lock_guard<std::mutex> lock(*mutex_);
+        buf_complete_no_lock(status);
     }
 
     void RRActionPluginBase::set_status(RRActionStatusE status)
@@ -138,33 +148,49 @@ namespace rr_common_plugins
     bool RRActionPluginBase::publish(SerialRequest req)
     {
         std::string serialized_data;
-        // done for safety
-        serialized_data.clear();
         if (!req.SerializeToString(&serialized_data)) {
             RCLCPP_ERROR(logger_, "Failed to serialize request");
-            reset_buffer(RRActionStatusE::ACTION_STATE_FAIL);
+            buf_complete(RRActionStatusE::ACTION_STATE_FAIL);
             return false;
         }
         serialized_data.push_back(TERM_CHAR);
         UInt8MultiArray msg;
         msg.data.resize(serialized_data.size());
         std::memcpy(msg.data.data(), serialized_data.data(), serialized_data.size());
-        reset_buffer(RRActionStatusE::ACTION_STATE_PREPARING);
         const std::lock_guard<std::mutex> lock(*mutex_);
+        buf_complete_no_lock(RRActionStatusE::ACTION_STATE_PREPARING);
         publisher_->publish(msg);
         return true;
     }
 
+    size_t RRActionPluginBase::buffer_size()
+    {
+        const std::lock_guard<std::mutex> lock(*mutex_);
+        return buffer_.size();
+    }
+
+    bool RRActionPluginBase::is_buf_complete()
+    {
+        const std::lock_guard<std::mutex> lock(*mutex_);
+        return buf_complete_;
+    }
+
     void RRActionPluginBase::subscriber_cb(const UInt8MultiArray::UniquePtr &packet)
     {
-        RCLCPP_DEBUG(logger_, "subscriber called");
-        if (buf_complete_) {
-            RCLCPP_DEBUG(logger_, "buffer completed, resetting");
-            reset_buffer(RRActionStatusE::ACTION_STATE_PREPARING);
-            {
-                const std::lock_guard<std::mutex> lock(*mutex_);
-                buf_complete_ = false;
+        // return immediately on deactivate.
+        {
+            const std::lock_guard<std::mutex> lock(*mutex_);
+            if (deactivate_) {
+                return;
             }
+        }
+        RCLCPP_DEBUG(logger_, "subscriber called");
+        if (is_buf_complete()) {
+            const std::lock_guard<std::mutex> lock(*mutex_);
+            RCLCPP_DEBUG(logger_, "buffer was completed, prepareing for new request");
+            status_ = RRActionStatusE::ACTION_STATE_PREPARING;
+            buffer_.clear();
+            buf_complete_ = false;
         }
 
         // Do not reset packet, could be just an empty packet
@@ -173,40 +199,48 @@ namespace rr_common_plugins
             return;
         }
 
-        if (buffer_.size() + packet->data.size() > BUFSIZ) {
+        if (buffer_size() + packet->data.size() > BUFSIZ) {
             RCLCPP_ERROR(logger_, "packet too large");
-            reset_buffer(RRActionStatusE::ACTION_STATE_FAIL);
+            buf_complete(RRActionStatusE::ACTION_STATE_FAIL);
+            return;
         }
 
         auto term_it = std::find(packet->data.begin(), packet->data.end(), TERM_CHAR);
         set_status(RRActionStatusE::ACTION_STATE_PROCESSING);
         if (term_it != packet->data.end()) {
+            const std::lock_guard<std::mutex> lock(*mutex_);
             buffer_.append(packet->data.begin(), term_it);
             buf_complete_ = true;
-            RCLCPP_DEBUG(logger_, "buffer size = '%ld'", buffer_.size());
+            RCLCPP_DEBUG(logger_, "buffer size = '%zu'", buffer_.size());
         }
         else {
+            const std::lock_guard<std::mutex> lock(*mutex_);
             buffer_.append(packet->data.begin(), packet->data.end());
-            RCLCPP_DEBUG(logger_, "buffer size = '%ld'", buffer_.size());
+            RCLCPP_DEBUG(logger_, "buffer size = '%zu'", buffer_.size());
             return;
         }
 
         SerialResponse res;
-        if (!res.ParseFromString(buffer_)) {
-            RCLCPP_ERROR(logger_, "Failed to deserialize response packet");
-            reset_buffer(RRActionStatusE::ACTION_STATE_FAIL);
-            res_avail_ = true;
-            return;
+        {
+            const std::lock_guard<std::mutex> lock(*mutex_);
+            if (!res.ParseFromString(buffer_)) {
+                RCLCPP_ERROR(logger_, "Failed to deserialize response packet");
+                buf_complete_no_lock(RRActionStatusE::ACTION_STATE_FAIL);
+                res_avail_ = true;
+                return;
+            }
         }
         set_status(RRActionStatusE::ACTION_STATE_PROCESSING);
         if (res.op() != op_code_) {
             // ignore response
             RCLCPP_DEBUG(logger_, "Ignoring response with mismatched op_code: expected %d, got %d",
                 static_cast<int>(op_code_), res.op());
-            reset_buffer(RRActionStatusE::ACTION_STATE_PREPARING);
+
+            // make sure that in a preparing state, not processing.
+            buf_complete(RRActionStatusE::ACTION_STATE_PREPARING);
             return;
         }
-        reset_buffer(RRActionStatusE::ACTION_STATE_SUCCESS);
+        buf_complete(RRActionStatusE::ACTION_STATE_SUCCESS);
         set_res(res);
     }
 } // namespace rr_common_plugins

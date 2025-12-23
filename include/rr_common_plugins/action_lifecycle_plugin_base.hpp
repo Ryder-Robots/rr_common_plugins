@@ -35,6 +35,12 @@ namespace rr_common_plugins
      * @class RRActionPluginBase
      * 
      * @brief provides lifecycle methods for plugin actions
+     * 
+     * State transitions are as follows:
+     * 
+     * ACTION_STATE_PREPARING → ACTION_STATE_SENT → ACTION_STATE_PROCESSING → ACTION_STATE_SUCCESS/FAIL
+     * 
+     * 
      */
     class RRActionPluginBase
     {
@@ -62,8 +68,6 @@ namespace rr_common_plugins
 
         [[nodiscard]] CallbackReturn on_cleanup(const State &state);
 
-        LifecyclePublisher::SharedPtr publisher_ = nullptr;
-
         void set_status(RRActionStatusE status);
 
         RRActionStatusE get_status();
@@ -77,16 +81,22 @@ namespace rr_common_plugins
         Time get_time_stamp();
 
       private:
+        static constexpr const char* WRITE_TOPIC_ = "/serial_write";
+        static constexpr const char*  READ_TOPIC_ = "/serial_read";
+
+        LifecyclePublisher::SharedPtr publisher_ = nullptr;
         Subscription::SharedPtr subscription_ = nullptr;
-        const std::string WRITE_TOPIC_ = "/serial_write";
-        const std::string READ_TOPIC_ = "/serial_read";
         rclcpp::Logger logger_ = rclcpp::get_logger("ImuActionSerialPluginBase");
         void set_res(SerialResponse res);
-        void reset_buffer(RRActionStatusE status);
+        void buf_complete_no_lock(RRActionStatusE status);
+        void buf_complete(RRActionStatusE status);
+        bool is_buf_complete();
 
         void subscriber_cb(const UInt8MultiArray::UniquePtr &packet);
         bool buf_complete_ = false;
         bool res_avail_ = false;
+        bool deactivate_ = false;
+        size_t buffer_size();
         std::string buffer_;
 
         const uint8_t TERM_CHAR = 0x1E;

@@ -8,4 +8,9 @@
     <description>Serial USB driver for IMU</description>
     <name>rr_imu_serial_action_plugin</name>
   </class>
+
+  <class type="rr_common_plugins::RrGpioDummyPlugin" base_class_type="rrobots::interfaces::RRGPIOInterface">
+    <description>Dummy GPIO interface (for testing)</description>
+    <name>rr_gpio_dummy_plugin</name>
+  </class>
 </library>

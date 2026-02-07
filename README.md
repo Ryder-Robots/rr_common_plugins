@@ -152,3 +152,9 @@ The package includes a pre-configured VSCode launch configuration in [.vscode/la
    - VSCode will connect to the gdbserver
 
 5. **Debug**: The debugger is now connected. The node will start executing, and execution will pause at your breakpoints, allowing you to inspect variables, step through code, and diagnose issues.
+
+## Create Package
+
+```
+bloom-generate rosdebian --os-name ubuntu --os-version noble --ros-distro $ROS_DISTRO
+```

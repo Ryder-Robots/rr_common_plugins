@@ -51,6 +51,7 @@ add_library(rr_common_plugins
   src/joy_subscriber_udp_plugin.cpp
   src/imu_action_serial_plugin.cpp
   src/action_lifecycle_plugin_base.cpp
+  src/rr_gpio_dummy_plugin.cpp
   ${PROTO_SRCS}
   ${PROTO_HDRS})
 

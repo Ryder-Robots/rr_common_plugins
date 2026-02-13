@@ -55,12 +55,18 @@ public:
 
   uint32_t tick(void) override;
 
-  int digitial_write(unsigned gpio, unsigned level) override;
+  int digital_write(unsigned gpio, unsigned level) override;
+
+  int digital_read(unsigned gpio) override;
 
   int set_isr_func_ex(unsigned gpio, unsigned edge, int timeout, gpio_isr_func_ex_t func, void* userdata) override;
   
   int clear_isr_func(unsigned gpio) override;
 
   int gpio_hardware_pwm(unsigned pin, unsigned pwm_freq, unsigned pwm_duty_cycle) override;
+
+  int gpio_hardware_get_pwm(unsigned pin) override;
+
+  std::list <unsigned> get_pwm_pins() const override;
 };
 }  // namespace rr_common_plugins

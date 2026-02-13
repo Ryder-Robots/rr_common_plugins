@@ -83,10 +83,16 @@ int RrGpioDummyPlugin::clear_isr_func(unsigned gpio)
   return 0;
 }
 
-int RrGpioDummyPlugin::digitial_write(unsigned gpio, unsigned level)
+int RrGpioDummyPlugin::digital_write(unsigned gpio, unsigned level)
 {
   (void)gpio;
   (void)level;
+  return 0;
+}
+
+int RrGpioDummyPlugin::digital_read(unsigned gpio)
+{
+  (void) gpio;
   return 0;
 }
 
@@ -96,6 +102,18 @@ int RrGpioDummyPlugin::gpio_hardware_pwm(unsigned pin, unsigned pwm_freq, unsign
   (void)pwm_freq;
   (void)pwm_duty_cycle;
   return 0;
+}
+
+int RrGpioDummyPlugin::gpio_hardware_get_pwm(unsigned pin)
+{
+  (void)pin;
+  return 0;
+}
+
+std::list <unsigned> RrGpioDummyPlugin::get_pwm_pins() const
+{
+  auto list = std::list<unsigned>();
+  return list;
 }
 
 }  // namespace rr_common_plugins
